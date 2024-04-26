@@ -1,0 +1,36 @@
+name: sab_menu_transliteration_helper
+description: "A helper for app builders who want transliterated menus"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.2 <4.0.0"
+
+dependencies:
+  feedback: ^3.1.0
+  flutter:
+    sdk: flutter
+  flutter_html: ^3.0.0-beta.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  package_info_plus: ^8.0.0
+  provider: ^6.1.2
+  smooth_page_indicator: ^1.1.0
+  super_drag_and_drop: ^0.8.12
+  url_launcher: ^6.2.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  generate: true
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/icons/icon.png
+    - assets/html/help.html
