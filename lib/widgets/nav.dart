@@ -89,7 +89,7 @@ class _NavBarState extends State<NavBar> {
             //   Icons.open_in_new,
             // ),
             onTap: () async {
-              const url = 'https://github.com/ngaretou';
+              const url = 'https://github.com/ngaretou/sab_menu_transliteration_helper';
               if (await canLaunchUrl(Uri.parse(url))) {
                 await launchUrl(Uri.parse(url),
                     mode: LaunchMode.platformDefault);
