@@ -1,12 +1,26 @@
 import 'dart:core';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'dart:collection';
 
+import '../providers/file_contents.dart';
+
 Color pageBackgroundColor = Colors.transparent;
-List<String> translationAsList = [];
-String source = '';
-String dest = '';
+
+//These are variables we'll use in all pages
+List<String> fileAsList = [];
+List<FileContents> originalFileContents = [];
+List<FileContents> newFileContents = [];
+List<FileContents> menuItemsToTransliterate = [];
+String menuItemsToTransliterateAsString = '';
+String menuItemsTransliteratedAsString = '';
+List<String> menuItemsTransliteratedAsList = [];
+List<String> menuItems = []; //the section headers
+String textFile = ''; //The whole text file
+String source = ''; //The source lang code
+String dest = ''; //destination lang code
+bool replaceExistingTransliterations = false;
 
 //Page one
 class LoadTranslations extends StatefulWidget {
@@ -104,13 +118,14 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                 reader.getValue<String>(Formats.plainText, (value) {
                   // You can access values through the `value` property.
                   if (value != null) {
-                    translationAsList = value.split('\n');
+                    textFile = value;
+                    fileAsList = value.split('\n');
                     //Feedback
                     showDialog(
                         barrierDismissible: true,
                         context: context,
                         builder: (BuildContext context) {
-                          Future.delayed(Durations.extralong4,
+                          Future.delayed(Durations.extralong2,
                               () => Navigator.of(context).pop());
 
                           return Center(
@@ -203,53 +218,89 @@ class ChooseLanguages extends StatefulWidget {
 }
 
 class _ChooseLanguagesState extends State<ChooseLanguages> {
-  // String source = '';
-  // String dest = '';
   TextEditingController newLangController = TextEditingController();
   TextEditingController sourceController = TextEditingController();
   TextEditingController destController = TextEditingController();
+  Set languages = {};
+  Set languagesActive = {};
+
+  late Future langinit;
+
+  Future getLanguages() async {
+    List<String> langCodesList = [];
+    String currentSection = 'header';
+
+    for (String line in fileAsList) {
+      final RegExpMatch? match = RegExp(r'(^)(\w+)(: )(.*)').firstMatch(line);
+      String? langCodeToAdd;
+      String contentsToAdd = '';
+
+      if (match != null) {
+        //get lang codes
+        if (match.group(2) != null) {
+          langCodesList.add(match.group(2)!);
+        }
+        langCodeToAdd = match.group(2)!;
+        contentsToAdd = match.group(4)!;
+      } else if (line.startsWith('\$')) {
+        //Create the list of menuItems like
+        //$ Menu_Bible
+        //$ Menu_Contents
+        currentSection = line;
+        menuItems.add(currentSection);
+        langCodeToAdd = null;
+        contentsToAdd = line;
+      } else {
+        langCodeToAdd = null;
+        contentsToAdd = line;
+      }
+
+      originalFileContents.add(FileContents(
+          key: UniqueKey(),
+          langCode: langCodeToAdd,
+          contents: contentsToAdd,
+          section: currentSection));
+    }
+
+    //get langs to unique values
+    Set<String> langCodesSet = langCodesList.toSet();
+    languages = SplayTreeSet<String>.from(langCodesSet);
+
+    return;
+  }
+
+  @override
+  void initState() {
+    langinit = getLanguages();
+    super.initState();
+  }
 
   @override
   void dispose() {
     newLangController.dispose();
+    sourceController.dispose();
+    destController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    Future<SplayTreeSet<String>> languages() async {
-      List<String> langCodesList = [];
-
-      for (String line in translationAsList) {
-        RegExpMatch? match = RegExp(r'(^)(\w+)(: )(.*)').firstMatch(line); // \s
-        if (match != null) {
-          if (match.group(2) != null) {
-            langCodesList.add(match.group(2)!);
-          }
-        }
-      }
-
-      //get to unique values
-      Set<String> langCodesSet = langCodesList.toSet();
-      final sortedSet = SplayTreeSet<String>.from(langCodesSet);
-
-      return sortedSet;
-    }
-
     return FutureBuilder(
-        future: languages(),
+        future: langinit,
         builder: (ctx, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else {
-            Set languages = {};
-            if (snapshot.data != null) {
-              languages = snapshot.data!.toSet();
-            }
+            print('building under FB');
+            languagesActive = languages;
+            languagesActive.removeWhere((element) =>
+                element == sourceController.text ||
+                element == destController.text);
 
             List<DropdownMenuEntry<String>> dropdownMenuEntries() {
+              print('building dropdownMenuEntries');
               List<DropdownMenuEntry<String>> entries = [];
-              for (String language in languages) {
+              for (String language in languagesActive) {
                 DropdownMenuEntry<String> entry =
                     DropdownMenuEntry(value: language, label: language);
                 entries.add(entry);
@@ -257,7 +308,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
               return entries;
             }
 
-            bool hasLanguages = languages.isNotEmpty;
+            bool hasLanguages = languagesActive.isNotEmpty;
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -278,7 +329,10 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                       controller: sourceController,
                       initialSelection: source,
                       dropdownMenuEntries: dropdownMenuEntries(),
-                      onSelected: (value) => source = value!,
+                      onSelected: (value) {
+                        source = value!;
+                        setState(() {});
+                      },
                     ),
                     const SizedBox(
                       width: 20,
@@ -298,7 +352,10 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                       controller: destController,
                       initialSelection: dest,
                       dropdownMenuEntries: dropdownMenuEntries(),
-                      onSelected: (value) => dest = value!,
+                      onSelected: (value) {
+                        dest = value!;
+                        setState(() {});
+                      },
                     ),
                     const SizedBox(
                       width: 20,
@@ -393,7 +450,30 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                           icon: const Icon(Icons.add)),
                     )
                   ],
-                )
+                ),
+                const SizedBox(
+                  width: 400,
+                  child: Divider(
+                    height: 60,
+                  ),
+                ),
+                SizedBox(
+                  width: 374,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                          'Replace existing transliterations for destination'),
+                      Switch(
+                          value: replaceExistingTransliterations,
+                          onChanged: (value) {
+                            setState(() {
+                              replaceExistingTransliterations = value;
+                            });
+                          })
+                    ],
+                  ),
+                ),
               ],
             );
           }
@@ -401,26 +481,252 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
   }
 }
 
-class GetStrings extends StatelessWidget {
+class GetStrings extends StatefulWidget {
   const GetStrings({super.key});
 
   @override
+  State<GetStrings> createState() => _GetStringsState();
+}
+
+class _GetStringsState extends State<GetStrings> {
+  late Future<String> stringInit;
+  TextEditingController sourceController = TextEditingController();
+  TextEditingController destController = TextEditingController();
+  bool showCopyHelper = false;
+  Icon hoveringIcon = const Icon(Icons.copy);
+
+  Future<String> getStringsToTranslate() async {
+    //Two cases - one where we're redoing all the transliterations, one where we're leaving the ones that are done already.
+    if (replaceExistingTransliterations) {
+      //If we're replacing all, go ahead and get rid of the old ones in the main list.
+      originalFileContents.removeWhere((element) => element.langCode == dest);
+
+      //And add all the source menuitems.
+      menuItemsToTransliterate.addAll(
+          originalFileContents.where((element) => element.langCode == source));
+    } else {
+      //If we're just transliterating the ones where there is no current transliteration....
+      //first grab the menuitems section by section
+      for (String menuItem in menuItems) {
+        List<FileContents> currentSection = originalFileContents
+            .where((element) => element.section == menuItem)
+            .toList();
+
+        //Does it have the source lang code?
+        bool containsSource =
+            currentSection.any((element) => element.langCode!.contains(source));
+
+        //Does it have the dest lang code?
+        bool containsDest =
+            currentSection.any((element) => element.langCode!.contains(dest));
+
+        //If it has the source but not the destination, add it to strings to translate
+        if (containsSource && !containsDest) {
+          menuItemsToTransliterate.add(currentSection
+              .firstWhere((element) => element.langCode!.contains(source)));
+        }
+      }
+    }
+
+    //cleanup - if it's just the label with no actual text
+    menuItemsToTransliterate.removeWhere((element) => element.contents == '');
+
+    //now get the contents into a String
+    for (FileContents item in menuItemsToTransliterate) {
+      String carriage = '\n';
+
+      //Note well this is RegExp with variable
+      // RegExp regExp = RegExp(r'(' + searchStringForSource + r')' + r'(.*)');
+
+      //this is the first one only
+      if (menuItemsToTransliterateAsString == '') {
+        menuItemsToTransliterateAsString = item.contents;
+      } else {
+        menuItemsToTransliterateAsString =
+            '$menuItemsToTransliterateAsString$carriage${item.contents}';
+      }
+    }
+
+    return menuItemsToTransliterateAsString;
+  }
+
+  @override
+  void initState() {
+    stringInit = getStringsToTranslate();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    sourceController.dispose();
+    destController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(child: Text('please convert $source to $dest'));
+    int minLines = 50;
+    return FutureBuilder(
+        future: stringInit,
+        builder: (ctx, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                //copy to clipboard
+                                Clipboard.setData(
+                                  ClipboardData(
+                                    text: snapshot.data!,
+                                  ),
+                                );
+                                setState(() {
+                                  hoveringIcon = const Icon(Icons.check);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('Contents copied')));
+                              },
+                              child: MouseRegion(
+                                onEnter: (_) {
+                                  setState(() {
+                                    showCopyHelper = true;
+                                  });
+                                },
+                                onExit: (_) {
+                                  setState(() {
+                                    showCopyHelper = false;
+                                    hoveringIcon = const Icon(Icons.copy);
+                                  });
+                                },
+                                child: Stack(children: [
+                                  Opacity(
+                                      opacity: showCopyHelper ? .5 : 0,
+                                      child: Container(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer,
+                                          child: Center(child: hoveringIcon))),
+                                  TextFormField(
+                                    enabled: false,
+                                    // readOnly: true,
+                                    minLines: minLines,
+                                    maxLines: minLines,
+                                    textCapitalization: TextCapitalization.none,
+                                    autocorrect: false,
+                                    initialValue: snapshot.data,
+                                    decoration: const InputDecoration(
+                                      filled: true,
+                                    ),
+                                    // controller: sourceController,
+                                    // The validator receives the text that the user has entered.
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter some text';
+                                      } else {
+                                        return null;
+                                      }
+                                    },
+                                  ),
+                                ]),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 20,
+                          ),
+                          Expanded(
+                            child: TextFormField(
+                              onChanged: (value) =>
+                                  menuItemsTransliteratedAsString = value,
+                              minLines: minLines,
+                              maxLines: minLines,
+                              textCapitalization: TextCapitalization.none,
+                              autocorrect: false,
+                              decoration: const InputDecoration(
+                                  filled: true,
+                                  hintText:
+                                      'Copy the menu translations at left and paste the transliterated menus here'),
+                              controller: destController,
+                              // The validator receives the text that the user has entered.
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter some text';
+                                } else {
+                                  return null;
+                                }
+                              },
+                            ),
+                          ),
+                        ]),
+                  ),
+                ],
+              ),
+            );
+          }
+        });
   }
 }
 
-class PasteStrings extends StatefulWidget {
-  const PasteStrings({super.key});
+class VerifyStrings extends StatefulWidget {
+  const VerifyStrings({super.key});
 
   @override
-  State<PasteStrings> createState() => _PasteStringsState();
+  State<VerifyStrings> createState() => _VerifyStringsState();
 }
 
-class _PasteStringsState extends State<PasteStrings> {
+class _VerifyStringsState extends State<VerifyStrings> {
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    Widget listItem(String orig, String trans) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              orig,
+              textAlign: TextAlign.right,
+            ),
+          ),
+          const SizedBox(
+            width: 20,
+          ),
+          Expanded(
+            child: Text(
+              trans,
+              textAlign: TextAlign.left,
+            ),
+          ),
+        ],
+      );
+    }
+
+    menuItemsTransliteratedAsList = menuItemsTransliteratedAsString.split('\n');
+
+    if (menuItemsToTransliterate.length ==
+        menuItemsTransliteratedAsList.length) {
+      return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: menuItemsToTransliterate.length,
+        itemBuilder: (context, index) {
+          return listItem(menuItemsToTransliterate[index].contents,
+              menuItemsTransliteratedAsList[index]);
+        },
+      );
+    } else {
+      return const Center(
+        child: Text('something went wrong'),
+      );
+    }
   }
 }
 

@@ -33,7 +33,7 @@ class _BodyState extends State<Body> {
       ),
       const ChooseLanguages(),
       const GetStrings(),
-      const PasteStrings(),
+      const VerifyStrings(),
       const VerifyTransliteration()
     ];
 
