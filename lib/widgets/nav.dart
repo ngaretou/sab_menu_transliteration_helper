@@ -53,8 +53,13 @@ class _NavBarState extends State<NavBar> {
               leading: const Icon(Icons.help),
               title: const Text('Help'),
               onTap: () {
-                Provider.of<HelpPaneController>(context, listen: false)
-                    .setActiveWidget(context, [const HelpText()]);
+                HelpPaneController helpPane =
+                    Provider.of<HelpPaneController>(context, listen: false);
+                if (helpPane.activeWidgets.isEmpty) {
+                  helpPane.setActiveWidget(context, [const HelpText()]);
+                } else {
+                  helpPane.closeHelpPane();
+                }
               }),
           ListTile(
               leading: const Icon(Icons.feedback),
@@ -89,7 +94,8 @@ class _NavBarState extends State<NavBar> {
             //   Icons.open_in_new,
             // ),
             onTap: () async {
-              const url = 'https://github.com/ngaretou/sab_menu_transliteration_helper';
+              const url =
+                  'https://github.com/ngaretou/sab_menu_transliteration_helper';
               if (await canLaunchUrl(Uri.parse(url))) {
                 await launchUrl(Uri.parse(url),
                     mode: LaunchMode.platformDefault);

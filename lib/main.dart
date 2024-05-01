@@ -23,6 +23,12 @@ void main() async {
         ChangeNotifierProvider(
           create: (ctx) => HelpPaneController(),
         ),
+        ChangeNotifierProvider(
+          create: (ctx) => NavController(),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => PageTracker(),
+        ),
       ], child: const MainApp()),
     ),
   );

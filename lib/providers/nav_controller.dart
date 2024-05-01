@@ -27,3 +27,29 @@ class HelpPaneController extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+class NavController extends ChangeNotifier {
+  // void Function()? disabled = () {};
+  // void Function()? enabled = () {};
+
+  bool enabled = false;
+  // bool enabled2 = false;
+
+  void setEnabled(bool incoming) {
+    enabled = incoming;
+  }
+
+  void setEnabledAndNotify(bool incoming) {
+    print('setting nav button enabled $incoming');
+    enabled = incoming;
+    notifyListeners();
+  }
+}
+
+class PageTracker extends ChangeNotifier {
+  int currentPage = 0;
+  setPage(int incoming) {
+    currentPage = incoming;
+    notifyListeners();
+  }
+}

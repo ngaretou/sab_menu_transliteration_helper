@@ -1,17 +1,20 @@
 import 'dart:core';
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:provider/provider.dart';
 import 'dart:collection';
 
 import '../providers/file_contents.dart';
+import '../providers/nav_controller.dart';
 
 Color pageBackgroundColor = Colors.transparent;
 
 //These are variables we'll use in all pages
 List<String> fileAsList = [];
 List<FileContents> originalFileContents = [];
-List<FileContents> newFileContents = [];
 List<FileContents> menuItemsToTransliterate = [];
 String menuItemsToTransliterateAsString = '';
 String menuItemsTransliteratedAsString = '';
@@ -22,7 +25,7 @@ String source = ''; //The source lang code
 String dest = ''; //destination lang code
 bool replaceExistingTransliterations = false;
 
-//Page one
+//Page 1
 class LoadTranslations extends StatefulWidget {
   final VoidCallback pageForward;
   const LoadTranslations({super.key, required this.pageForward});
@@ -33,8 +36,38 @@ class LoadTranslations extends StatefulWidget {
 
 class _LoadTranslationsState extends State<LoadTranslations> {
   bool acceptDrop = true;
+
+  resetData() {
+    fileAsList = [];
+    originalFileContents = [];
+    menuItemsToTransliterate = [];
+    menuItemsToTransliterateAsString = '';
+    menuItemsTransliteratedAsString = '';
+    menuItemsTransliteratedAsList = [];
+    menuItems = []; //the section headers
+    textFile = ''; //The whole text file
+    source = ''; //The source lang code
+    dest = ''; //destination lang code
+    replaceExistingTransliterations = false;
+  }
+
   @override
   Widget build(BuildContext context) {
+    //This is for the nav buttons
+    Provider.of<PageTracker>(context, listen: true).addListener(() {
+      NavController navButtons =
+          Provider.of<NavController>(context, listen: false);
+      PageTracker pageTracker =
+          Provider.of<PageTracker>(context, listen: false);
+      if (pageTracker.currentPage == 0) {
+        if (fileAsList.isNotEmpty) {
+          navButtons.setEnabledAndNotify(true);
+        } else {
+          navButtons.setEnabledAndNotify(false);
+        }
+      }
+    });
+
     return Container(
       color: pageBackgroundColor,
       child: DropRegion(
@@ -118,8 +151,11 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                 reader.getValue<String>(Formats.plainText, (value) {
                   // You can access values through the `value` property.
                   if (value != null) {
+                    //in case we're doing multiple files, reset all data if dropping a new file in
+                    resetData();
                     textFile = value;
                     fileAsList = value.split('\n');
+
                     //Feedback
                     showDialog(
                         barrierDismissible: true,
@@ -140,8 +176,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                                   width: 128,
                                   child: const Icon(Icons.check)));
                         });
-
-                    widget.pageForward();
+                    Future.delayed(Durations.long1, () => widget.pageForward());
                   }
                 }, onError: (error) {
                   debugPrint('Error reading value $error');
@@ -196,9 +231,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                     width: 20,
                   ),
                   FilledButton.icon(
-                      onPressed: () {
-                        // widget.pageForward();
-                      },
+                      onPressed: () {},
                       icon: const Icon(Icons.question_mark),
                       label: const Text('Test')),
                 ],
@@ -226,7 +259,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
 
   late Future langinit;
 
-  Future getLanguages() async {
+  Future parseStringFile() async {
     List<String> langCodesList = [];
     String currentSection = 'header';
 
@@ -271,7 +304,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
 
   @override
   void initState() {
-    langinit = getLanguages();
+    langinit = parseStringFile();
     super.initState();
   }
 
@@ -285,13 +318,47 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
 
   @override
   Widget build(BuildContext context) {
+    print('page 2 biuld');
+    NavController navButtons =
+        Provider.of<NavController>(context, listen: false);
+    PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);
+
+    checkForNavEnabling() {
+      if (pageTracker.currentPage == 1) {
+        if (source != '' && dest != '') {
+          navButtons.setEnabledAndNotify(true);
+        } else {
+          navButtons.setEnabledAndNotify(false);
+        }
+      }
+    }
+
+    //This is for the nav buttons
+    Provider.of<PageTracker>(context, listen: true).addListener(() {
+      checkForNavEnabling();
+    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   print('callback in page two');
+    //   NavController navButtons =
+    //       Provider.of<NavController>(context, listen: false);
+    //   PageTracker pageTracker =
+    //       Provider.of<PageTracker>(context, listen: false);
+    //   if (pageTracker.currentPage == 1) {
+    //     if (source != '' && dest != '') {
+    //       navButtons.setEnabledAndNotify(true);
+    //     } else {
+    //       navButtons.setEnabledAndNotify(false);
+    //     }
+    //   }
+    // });
+
     return FutureBuilder(
         future: langinit,
         builder: (ctx, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else {
-            print('building under FB');
+            print('building under FutureBuilder page 2');
             languagesActive = languages;
             languagesActive.removeWhere((element) =>
                 element == sourceController.text ||
@@ -331,7 +398,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                       dropdownMenuEntries: dropdownMenuEntries(),
                       onSelected: (value) {
                         source = value!;
-                        setState(() {});
+                        checkForNavEnabling();
                       },
                     ),
                     const SizedBox(
@@ -354,7 +421,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                       dropdownMenuEntries: dropdownMenuEntries(),
                       onSelected: (value) {
                         dest = value!;
-                        setState(() {});
+                        checkForNavEnabling();
                       },
                     ),
                     const SizedBox(
@@ -368,6 +435,16 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                                 barrierDismissible: true,
                                 context: context,
                                 builder: (BuildContext context) {
+                                  newLangSubmit() {
+                                    setState(() {
+                                      destController.text =
+                                          newLangController.text;
+                                      dest = newLangController.text;
+                                      newLangController.text = '';
+                                    });
+                                    Navigator.of(context).pop();
+                                  }
+
                                   return Center(
                                       child: Container(
                                           padding: const EdgeInsets.all(20),
@@ -390,6 +467,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                                                   height: 20,
                                                 ),
                                                 TextFormField(
+                                                  autofocus: true,
                                                   textCapitalization:
                                                       TextCapitalization.none,
                                                   autocorrect: false,
@@ -408,6 +486,8 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                                                       return null;
                                                     }
                                                   },
+                                                  onFieldSubmitted: (value) =>
+                                                      newLangSubmit(),
                                                 ),
                                                 const SizedBox(
                                                   height: 20,
@@ -417,19 +497,8 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                                                       MainAxisAlignment.center,
                                                   children: [
                                                     ElevatedButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            destController
-                                                                    .text =
-                                                                newLangController
-                                                                    .text;
-                                                            dest =
-                                                                newLangController
-                                                                    .text;
-                                                          });
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                        },
+                                                        onPressed: () =>
+                                                            newLangSubmit(),
                                                         child:
                                                             const Text('OK')),
                                                     const SizedBox(
@@ -481,6 +550,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
   }
 }
 
+//Page 3
 class GetStrings extends StatefulWidget {
   const GetStrings({super.key});
 
@@ -489,65 +559,63 @@ class GetStrings extends StatefulWidget {
 }
 
 class _GetStringsState extends State<GetStrings> {
-  late Future<String> stringInit;
-  TextEditingController sourceController = TextEditingController();
-  TextEditingController destController = TextEditingController();
+  late Future stringInit;
   bool showCopyHelper = false;
   Icon hoveringIcon = const Icon(Icons.copy);
 
-  Future<String> getStringsToTranslate() async {
-    //Two cases - one where we're redoing all the transliterations, one where we're leaving the ones that are done already.
-    if (replaceExistingTransliterations) {
-      //If we're replacing all, go ahead and get rid of the old ones in the main list.
-      originalFileContents.removeWhere((element) => element.langCode == dest);
+  Future getStringsToTranslate() async {
+    if (menuItemsToTransliterate.isEmpty) {
+      //Two cases - one where we're redoing all the transliterations, one where we're leaving the ones that are done already.
+      if (replaceExistingTransliterations) {
+        //If we're replacing all, go ahead and get rid of the old ones in the main list.
+        originalFileContents.removeWhere((element) => element.langCode == dest);
 
-      //And add all the source menuitems.
-      menuItemsToTransliterate.addAll(
-          originalFileContents.where((element) => element.langCode == source));
-    } else {
-      //If we're just transliterating the ones where there is no current transliteration....
-      //first grab the menuitems section by section
-      for (String menuItem in menuItems) {
-        List<FileContents> currentSection = originalFileContents
-            .where((element) => element.section == menuItem)
-            .toList();
+        //And add all the source menuitems.
+        menuItemsToTransliterate.addAll(originalFileContents
+            .where((element) => element.langCode == source));
+      } else {
+        //If we're just transliterating the ones where there is no current transliteration....
+        //first grab the menuitems section by section
+        for (String menuItem in menuItems) {
+          List<FileContents> currentSection = originalFileContents
+              .where((element) => element.section == menuItem)
+              .toList();
 
-        //Does it have the source lang code?
-        bool containsSource =
-            currentSection.any((element) => element.langCode!.contains(source));
+          //Does it have the source lang code?
+          bool containsSource = currentSection
+              .any((element) => element.langCode!.contains(source));
 
-        //Does it have the dest lang code?
-        bool containsDest =
-            currentSection.any((element) => element.langCode!.contains(dest));
+          //Does it have the dest lang code?
+          bool containsDest =
+              currentSection.any((element) => element.langCode!.contains(dest));
 
-        //If it has the source but not the destination, add it to strings to translate
-        if (containsSource && !containsDest) {
-          menuItemsToTransliterate.add(currentSection
-              .firstWhere((element) => element.langCode!.contains(source)));
+          //If it has the source but not the destination, add it to strings to translate
+          if (containsSource && !containsDest) {
+            menuItemsToTransliterate.add(currentSection
+                .firstWhere((element) => element.langCode!.contains(source)));
+          }
+        }
+      }
+
+      //cleanup - if it's just the label with no actual text
+      menuItemsToTransliterate.removeWhere((element) => element.contents == '');
+
+      //now get the contents into a String
+      for (FileContents item in menuItemsToTransliterate) {
+        String carriage = '\n';
+
+        //Note well this is RegExp with variable
+        // RegExp regExp = RegExp(r'(' + searchStringForSource + r')' + r'(.*)');
+
+        //this is the first one only
+        if (menuItemsToTransliterateAsString == '') {
+          menuItemsToTransliterateAsString = item.contents;
+        } else {
+          menuItemsToTransliterateAsString =
+              '$menuItemsToTransliterateAsString$carriage${item.contents}';
         }
       }
     }
-
-    //cleanup - if it's just the label with no actual text
-    menuItemsToTransliterate.removeWhere((element) => element.contents == '');
-
-    //now get the contents into a String
-    for (FileContents item in menuItemsToTransliterate) {
-      String carriage = '\n';
-
-      //Note well this is RegExp with variable
-      // RegExp regExp = RegExp(r'(' + searchStringForSource + r')' + r'(.*)');
-
-      //this is the first one only
-      if (menuItemsToTransliterateAsString == '') {
-        menuItemsToTransliterateAsString = item.contents;
-      } else {
-        menuItemsToTransliterateAsString =
-            '$menuItemsToTransliterateAsString$carriage${item.contents}';
-      }
-    }
-
-    return menuItemsToTransliterateAsString;
   }
 
   @override
@@ -555,16 +623,41 @@ class _GetStringsState extends State<GetStrings> {
     stringInit = getStringsToTranslate();
     super.initState();
   }
-
-  @override
-  void dispose() {
-    sourceController.dispose();
-    destController.dispose();
-    super.dispose();
-  }
+  //TODO practically speaking, pages 0 and 1 work alright in delaying the enabled nav button.
+  //page 2 not working well.
 
   @override
   Widget build(BuildContext context) {
+    //This is for the nav buttons
+    Provider.of<PageTracker>(context, listen: true).addListener(() {
+      NavController navButtons =
+          Provider.of<NavController>(context, listen: false);
+      PageTracker pageTracker =
+          Provider.of<PageTracker>(context, listen: false);
+      if (pageTracker.currentPage == 2) {
+        if (menuItemsTransliteratedAsString != '') {
+          navButtons.setEnabledAndNotify(true);
+        } else {
+          navButtons.setEnabledAndNotify(false);
+        }
+      }
+    });
+
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   print('callback in page three');
+    //   NavController navButtons =
+    //       Provider.of<NavController>(context, listen: false);
+    //   PageTracker pageTracker =
+    //       Provider.of<PageTracker>(context, listen: false);
+    //   if (pageTracker.currentPage == 2) {
+    //     if (menuItemsTransliteratedAsString != '') {
+    //       navButtons.setEnabledAndNotify(true);
+    //     } else {
+    //       navButtons.setEnabled(false);
+    //     }
+    //   }
+    // });
+
     int minLines = 50;
     return FutureBuilder(
         future: stringInit,
@@ -586,15 +679,12 @@ class _GetStringsState extends State<GetStrings> {
                                 //copy to clipboard
                                 Clipboard.setData(
                                   ClipboardData(
-                                    text: snapshot.data!,
+                                    text: menuItemsToTransliterateAsString,
                                   ),
                                 );
                                 setState(() {
                                   hoveringIcon = const Icon(Icons.check);
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Contents copied')));
                               },
                               child: MouseRegion(
                                 onEnter: (_) {
@@ -623,7 +713,8 @@ class _GetStringsState extends State<GetStrings> {
                                     maxLines: minLines,
                                     textCapitalization: TextCapitalization.none,
                                     autocorrect: false,
-                                    initialValue: snapshot.data,
+                                    initialValue:
+                                        menuItemsToTransliterateAsString,
                                     decoration: const InputDecoration(
                                       filled: true,
                                     ),
@@ -646,8 +737,11 @@ class _GetStringsState extends State<GetStrings> {
                           ),
                           Expanded(
                             child: TextFormField(
-                              onChanged: (value) =>
-                                  menuItemsTransliteratedAsString = value,
+                              onChanged: (value) {
+                                menuItemsTransliteratedAsString = value;
+                                setState(() {});
+                              },
+
                               minLines: minLines,
                               maxLines: minLines,
                               textCapitalization: TextCapitalization.none,
@@ -656,7 +750,7 @@ class _GetStringsState extends State<GetStrings> {
                                   filled: true,
                                   hintText:
                                       'Copy the menu translations at left and paste the transliterated menus here'),
-                              controller: destController,
+                              initialValue: menuItemsTransliteratedAsString,
                               // The validator receives the text that the user has entered.
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -677,6 +771,7 @@ class _GetStringsState extends State<GetStrings> {
   }
 }
 
+//Page 4
 class VerifyStrings extends StatefulWidget {
   const VerifyStrings({super.key});
 
@@ -714,27 +809,135 @@ class _VerifyStringsState extends State<VerifyStrings> {
 
     if (menuItemsToTransliterate.length ==
         menuItemsTransliteratedAsList.length) {
-      return ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: menuItemsToTransliterate.length,
-        itemBuilder: (context, index) {
-          return listItem(menuItemsToTransliterate[index].contents,
-              menuItemsTransliteratedAsList[index]);
-        },
+      return Column(
+        children: [
+          const Text(
+              'Check out the results to make sure they are lining up correctly: '),
+          Expanded(
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: menuItemsToTransliterate.length,
+              itemBuilder: (context, index) {
+                return listItem(menuItemsToTransliterate[index].contents,
+                    menuItemsTransliteratedAsList[index]);
+              },
+            ),
+          ),
+        ],
       );
     } else {
       return const Center(
-        child: Text('something went wrong'),
+        child: Text(
+            'something went wrong - go back and try again and make sure no extra lines get into the text'),
       );
     }
   }
 }
 
-class VerifyTransliteration extends StatelessWidget {
-  const VerifyTransliteration({super.key});
+class CreateNewFile extends StatefulWidget {
+  const CreateNewFile({super.key});
+
+  @override
+  State<CreateNewFile> createState() => _CreateNewFileState();
+}
+
+class _CreateNewFileState extends State<CreateNewFile> {
+  late Future initFile;
+  Future<String> createNewFile() async {
+    Future<List<FileContents>> transliterationsToBigList() async {
+      List<FileContents> newFileContents = [];
+      int num = menuItemsToTransliterate.length;
+      newFileContents.addAll(originalFileContents);
+
+      //put the transliterated menuItems in the big list
+      for (var i = 0; i < num; i++) {
+        int targetIndex = newFileContents.indexWhere(
+            (element) => element.key == menuItemsToTransliterate[i].key);
+
+        FileContents newEntry = FileContents(
+            key: UniqueKey(),
+            langCode: dest,
+            contents: menuItemsTransliteratedAsList[i],
+            section: menuItemsToTransliterate[i].section);
+
+        newFileContents.insert(targetIndex + 1, newEntry);
+      }
+      return newFileContents;
+    }
+
+    Future<String> convertListToString(List<FileContents> input) async {
+      String listContentsAsString = '';
+      //Convert the big list to a string
+      for (FileContents item in input) {
+        String carriage = '\n';
+        //this is the first one only
+        if (listContentsAsString == '') {
+          listContentsAsString = item.contents;
+        } else {
+          String line = '';
+
+          if (item.langCode == null) {
+            line = item.contents;
+          } else {
+            {
+              line = '${item.langCode!}: ${item.contents}';
+            }
+          }
+
+          listContentsAsString = '$listContentsAsString$carriage$line';
+        }
+      }
+
+      return listContentsAsString;
+    }
+
+    return await convertListToString(await transliterationsToBigList());
+  }
+
+  @override
+  void initState() {
+    initFile = createNewFile();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return FutureBuilder(
+        future: initFile,
+        builder: (ctx, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            return Center(
+              child: FilledButton.icon(
+                  onPressed: () async {
+                    //filename
+                    final DateTime now = DateTime.now();
+                    final String formattedDate = formatDate(now);
+                    final String filename = 'exported SAB menu $formattedDate';
+
+                    //data
+                    final List<int> utf8Bytes =
+                        utf8.encode(snapshot.data.toString()).toList();
+                    final Uint8List utf8list = Uint8List.fromList(utf8Bytes);
+
+                    await FileSaver.instance.saveFile(
+                        name: filename,
+                        ext: 'txt',
+                        bytes: utf8list,
+                        mimeType: MimeType.text);
+                  },
+                  icon: const Icon(Icons.download),
+                  label: const Text("Download new file")),
+            );
+          }
+        });
   }
+}
+
+String formatDate(DateTime date) {
+  final String month = date.month.toString().padLeft(2, '0');
+  final String day = date.day.toString().padLeft(2, '0');
+  final String year = date.year.toString();
+  return '$month $day $year';
 }

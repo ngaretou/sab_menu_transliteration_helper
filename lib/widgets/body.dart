@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:provider/provider.dart';
+import '../providers/nav_controller.dart';
 
 import 'pages.dart';
 
@@ -12,7 +14,7 @@ class Body extends StatefulWidget {
 
 class _BodyState extends State<Body> {
   PageController pageController = PageController();
-  int currentIndex = 0;
+  int? currentIndex;
 
   @override
   void dispose() {
@@ -22,20 +24,52 @@ class _BodyState extends State<Body> {
 
   @override
   Widget build(BuildContext context) {
-    programmaticPageForward() {
-      pageController.animateToPage(currentIndex + 1,
+    print('Body build');
+
+    // bool enabled = Provider.of<NavController>(context, listen: false).enabled;
+    bool enabled = true;
+
+    pageForwardNoCheck() {
+      int index = (pageController.page!).toInt();
+
+      pageController.animateToPage(index + 1,
           duration: Durations.medium4, curve: Curves.decelerate);
     }
 
     List<Widget> pages = [
       LoadTranslations(
-        pageForward: programmaticPageForward,
+        pageForward: () => pageForwardNoCheck(),
       ),
       const ChooseLanguages(),
       const GetStrings(),
       const VerifyStrings(),
-      const VerifyTransliteration()
+      const CreateNewFile()
     ];
+    pageForward() {
+      int index = (pageController.page!).toInt();
+      if (pages.length > index + 1) {
+        pageController.animateToPage(index + 1,
+            duration: Durations.medium4, curve: Curves.decelerate);
+      } else {
+        pageController.animateToPage(0,
+            duration: Durations.medium4, curve: Curves.decelerate);
+      }
+    }
+
+    pageBack() {
+      currentIndex = (pageController.page!).toInt();
+
+      pageController.animateToPage(currentIndex! - 1,
+          duration: Durations.medium4, curve: Curves.decelerate);
+    }
+
+    // programmaticPageForward() {
+    //   currentIndex = (pageController.page!).toInt();
+    //   pageController.animateToPage(currentIndex! + 1,
+    //       duration: Durations.medium4, curve: Curves.decelerate);
+    // }
+
+    PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);
 
     return Expanded(
       child: ClipRRect(
@@ -50,7 +84,8 @@ class _BodyState extends State<Body> {
                 children: [
                   Expanded(
                     child: PageView.builder(
-                      physics: const ClampingScrollPhysics(),
+                      onPageChanged: (value) => pageTracker.setPage(value),
+                      physics: const NeverScrollableScrollPhysics(),
                       controller: pageController,
                       itemCount: pages.length,
                       itemBuilder: (context, index) {
@@ -70,15 +105,7 @@ class _BodyState extends State<Body> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton.filled(
-                              onPressed: () {
-                                int currentIndex =
-                                    (pageController.page!).toInt();
-                                if (currentIndex != 0) {
-                                  pageController.animateToPage(currentIndex - 1,
-                                      duration: Durations.medium4,
-                                      curve: Curves.decelerate);
-                                }
-                              },
+                              onPressed: pageBack,
                               icon: const Icon(Icons.arrow_back)),
                           SmoothPageIndicator(
                               controller: pageController, // PageController
@@ -86,25 +113,19 @@ class _BodyState extends State<Body> {
                               effect:
                                   const WormEffect(), // your preferred effect
                               onDotClicked: (index) {
-                                pageController.animateToPage(index,
-                                    duration: Durations.medium4,
-                                    curve: Curves.decelerate);
-                              }),
-                          IconButton.filled(
-                              onPressed: () {
-                                int currentIndex =
-                                    (pageController.page!).toInt();
-                                if (pages.length > currentIndex + 1) {
-                                  pageController.animateToPage(currentIndex + 1,
-                                      duration: Durations.medium4,
-                                      curve: Curves.decelerate);
-                                } else {
-                                  pageController.animateToPage(0,
+                                if (enabled) {
+                                  pageController.animateToPage(index,
                                       duration: Durations.medium4,
                                       curve: Curves.decelerate);
                                 }
-                              },
-                              icon: const Icon(Icons.arrow_forward)),
+                              }),
+                          Consumer<NavController>(
+                              builder: (context, value, child) {
+                            return IconButton.filled(
+                                onPressed:
+                                    value.enabled ? () => pageForward() : null,
+                                icon: const Icon(Icons.arrow_forward));
+                          }),
                         ],
                       ),
                     ),
