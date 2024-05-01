@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:collection';
 
@@ -23,6 +24,7 @@ List<String> menuItems = []; //the section headers
 String textFile = ''; //The whole text file
 String source = ''; //The source lang code
 String dest = ''; //destination lang code
+bool newLanguage = false; //if this is a user-entered new language code
 bool replaceExistingTransliterations = false;
 
 //Page 1
@@ -53,12 +55,14 @@ class _LoadTranslationsState extends State<LoadTranslations> {
 
   @override
   Widget build(BuildContext context) {
+    NavController navButtons =
+        Provider.of<NavController>(context, listen: false);
+    PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);
+    print('page 1 build');
     //This is for the nav buttons
     Provider.of<PageTracker>(context, listen: true).addListener(() {
-      NavController navButtons =
-          Provider.of<NavController>(context, listen: false);
-      PageTracker pageTracker =
-          Provider.of<PageTracker>(context, listen: false);
+      print('listener in page 1');
+
       if (pageTracker.currentPage == 0) {
         if (fileAsList.isNotEmpty) {
           navButtons.setEnabledAndNotify(true);
@@ -68,6 +72,33 @@ class _LoadTranslationsState extends State<LoadTranslations> {
       }
     });
 
+    readInData(String fileAsString) {
+      //in case we're doing multiple files, reset all data if dropping a new file in
+      resetData();
+      textFile = fileAsString;
+      fileAsList = fileAsString.split('\n');
+
+      //Brief check mark feedback for user
+      showDialog(
+          barrierDismissible: true,
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(
+                Durations.extralong2, () => Navigator.of(context).pop());
+
+            return Center(
+                child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20.0),
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                    height: 80,
+                    width: 128,
+                    child: const Icon(Icons.check)));
+          });
+      Future.delayed(Durations.long1, () => widget.pageForward());
+    }
+
     return Container(
       color: pageBackgroundColor,
       child: DropRegion(
@@ -75,16 +106,26 @@ class _LoadTranslationsState extends State<LoadTranslations> {
           formats: const [Formats.plainTextFile],
           hitTestBehavior: HitTestBehavior.opaque,
           onDropOver: (event) {
-            // You can inspect local data here, as well as formats of each item.
-            // However on certain platforms (mobile / web) the actual data is
-            // only available when the drop is accepted (onPerformDrop).
-            final item = event.session.items.first;
-            if (item.localData is Map) {
-              // This is a drag within the app and has custom local data set.
+            print('ondropover');
+            // // You can inspect local data here, as well as formats of each item.
+            // // However on certain platforms (mobile / web) the actual data is
+            // // only available when the drop is accepted (onPerformDrop).
+
+            // This drop region only supports copy operation.
+            if (event.session.allowedOperations.contains(DropOperation.copy)) {
+              return DropOperation.copy;
+            } else {
+              return DropOperation.none;
             }
+          },
+          onDropEnter: (event) {
+            final item = event.session.items.first;
+            // if (item.localData is Map) {
+            //   // This is a drag within the app and has custom local data set.
+            // }
             if (item.canProvide(Formats.plainText)) {
               // this item contains plain text.
-              debugPrint('yes to plain text in dropover from onDropOver');
+              debugPrint('yes to plain text in dropover from onDropEnter');
               final item = event.session.items.first;
               if (item.canProvide(Formats.plainText)) {
                 // this item contains plain text.
@@ -99,32 +140,24 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                     Theme.of(context).colorScheme.errorContainer;
               });
             }
-            // This drop region only supports copy operation.
-            if (event.session.allowedOperations.contains(DropOperation.copy)) {
-              return DropOperation.copy;
-            } else {
-              return DropOperation.none;
-            }
-          },
-          // onDropEnter: (event) {
-          //   // This is called when region first accepts a drag. You can use this
-          //   // to display a visual indicator that the drop is allowed.
-          //   if (event.session.items.first.dataReader != null) {
-          //     print('tnering if');
-          //     final dataReader = event.session.items.first.dataReader!;
-          //     if (!dataReader.canProvide(Formats.plainTextFile)) {
-          //       print('file type no good');
-          //
+            //   // This is called when region first accepts a drag. You can use this
+            //   // to display a visual indicator that the drop is allowed.
+            //   if (event.session.items.first.dataReader != null) {
+            //     print('tnering if');
+            //     final dataReader = event.session.items.first.dataReader!;
+            //     if (!dataReader.canProvide(Formats.plainTextFile)) {
+            //       print('file type no good');
+            //
 
-          //       return;
-          //     } else {
-          //       print('loooks like were good to go');
-          //       dataReader.getFile(Formats.plainTextFile, (value) async {
-          //         final mydata = utf8.decode(await value.readAll());
-          //       });
-          //     }
-          //   }
-          // },
+            //       return;
+            //     } else {
+            //       print('loooks like were good to go');
+            //       dataReader.getFile(Formats.plainTextFile, (value) async {
+            //         final mydata = utf8.decode(await value.readAll());
+            //       });
+            //     }
+            //   }
+          },
           onDropLeave: (event) {
             // Called when drag leaves the region. Will also be called after
             // drag completion.
@@ -151,32 +184,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                 reader.getValue<String>(Formats.plainText, (value) {
                   // You can access values through the `value` property.
                   if (value != null) {
-                    //in case we're doing multiple files, reset all data if dropping a new file in
-                    resetData();
-                    textFile = value;
-                    fileAsList = value.split('\n');
-
-                    //Feedback
-                    showDialog(
-                        barrierDismissible: true,
-                        context: context,
-                        builder: (BuildContext context) {
-                          Future.delayed(Durations.extralong2,
-                              () => Navigator.of(context).pop());
-
-                          return Center(
-                              child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                  ),
-                                  height: 80,
-                                  width: 128,
-                                  child: const Icon(Icons.check)));
-                        });
-                    Future.delayed(Durations.long1, () => widget.pageForward());
+                    readInData(value);
                   }
                 }, onError: (error) {
                   debugPrint('Error reading value $error');
@@ -217,23 +225,41 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   FilledButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        FilePickerResult? result =
+                            await FilePicker.platform.pickFiles();
+
+                        if (result != null) {
+                          PlatformFile file = result.files.first;
+
+                          if (file.bytes != null) {
+                            // Decode the bytes into a string
+                            final fileContent =
+                                utf8.decode((file.bytes)!.toList()).toString();
+                            readInData(fileContent);
+                          } else {
+                            print('No data found');
+                          }
+                        } else {
+                          // User canceled the picker
+                        }
+                      },
                       icon: const Icon(Icons.file_open),
                       label: const Text('Choose file')),
-                  const SizedBox(
-                    width: 20,
-                  ),
-                  FilledButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.paste),
-                      label: const Text('Paste contents')),
-                  const SizedBox(
-                    width: 20,
-                  ),
-                  FilledButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.question_mark),
-                      label: const Text('Test')),
+                  // const SizedBox(
+                  //   width: 20,
+                  // ),
+                  // FilledButton.icon(
+                  //     onPressed: () {},
+                  //     icon: const Icon(Icons.paste),
+                  //     label: const Text('Paste contents')),
+                  // const SizedBox(
+                  //   width: 20,
+                  // ),
+                  // FilledButton.icon(
+                  //     onPressed: () {},
+                  //     icon: const Icon(Icons.question_mark),
+                  //     label: const Text('Test')),
                 ],
               )
             ],
@@ -254,6 +280,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
   TextEditingController newLangController = TextEditingController();
   TextEditingController sourceController = TextEditingController();
   TextEditingController destController = TextEditingController();
+
   Set languages = {};
   Set languagesActive = {};
 
@@ -335,6 +362,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
 
     //This is for the nav buttons
     Provider.of<PageTracker>(context, listen: true).addListener(() {
+      print('listener in page 2');
       checkForNavEnabling();
     });
     // WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -377,173 +405,188 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
 
             bool hasLanguages = languagesActive.isNotEmpty;
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Choose the source and the destination language. '),
-                const Text(
-                    'If you are adding a new script for the first time, click the plus to add the language abbreviation.'),
-                const SizedBox(
-                  height: 20,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(width: 100, child: Text('Source')),
-                    const SizedBox(width: 100),
-                    DropdownMenu(
-                      enabled: hasLanguages,
-                      controller: sourceController,
-                      initialSelection: source,
-                      dropdownMenuEntries: dropdownMenuEntries(),
-                      onSelected: (value) {
-                        source = value!;
-                        checkForNavEnabling();
-                      },
-                    ),
-                    const SizedBox(
-                      width: 20,
-                    ),
-                    const SizedBox(
-                      width: 40,
-                    )
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(width: 100, child: Text('Destination')),
-                    const SizedBox(width: 100),
-                    DropdownMenu(
-                      enabled: hasLanguages,
-                      controller: destController,
-                      initialSelection: dest,
-                      dropdownMenuEntries: dropdownMenuEntries(),
-                      onSelected: (value) {
-                        dest = value!;
-                        checkForNavEnabling();
-                      },
-                    ),
-                    const SizedBox(
-                      width: 20,
-                    ),
-                    SizedBox(
-                      width: 40,
-                      child: IconButton.filled(
-                          onPressed: () {
-                            showDialog(
-                                barrierDismissible: true,
-                                context: context,
-                                builder: (BuildContext context) {
-                                  newLangSubmit() {
-                                    setState(() {
-                                      destController.text =
-                                          newLangController.text;
-                                      dest = newLangController.text;
-                                      newLangController.text = '';
-                                    });
-                                    Navigator.of(context).pop();
-                                  }
-
-                                  return Center(
-                                      child: Container(
-                                          padding: const EdgeInsets.all(20),
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(20.0),
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .secondaryContainer,
-                                          ),
-                                          height: 200,
-                                          width: 250,
-                                          child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const Text(
-                                                    'Add a new language code here'),
-                                                const SizedBox(
-                                                  height: 20,
-                                                ),
-                                                TextFormField(
-                                                  autofocus: true,
-                                                  textCapitalization:
-                                                      TextCapitalization.none,
-                                                  autocorrect: false,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                    filled: true,
-                                                    hintText: 'new lang code',
-                                                  ),
-                                                  controller: newLangController,
-                                                  // The validator receives the text that the user has entered.
-                                                  validator: (value) {
-                                                    if (value == null ||
-                                                        value.isEmpty) {
-                                                      return 'Please enter some text';
-                                                    } else {
-                                                      return null;
-                                                    }
-                                                  },
-                                                  onFieldSubmitted: (value) =>
-                                                      newLangSubmit(),
-                                                ),
-                                                const SizedBox(
-                                                  height: 20,
-                                                ),
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    ElevatedButton(
-                                                        onPressed: () =>
-                                                            newLangSubmit(),
-                                                        child:
-                                                            const Text('OK')),
-                                                    const SizedBox(
-                                                      width: 20,
-                                                    ),
-                                                    ElevatedButton(
-                                                        onPressed: () {
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                        },
-                                                        child: const Text(
-                                                            'Cancel')),
-                                                  ],
-                                                ),
-                                              ])));
-                                });
-                          },
-                          icon: const Icon(Icons.add)),
-                    )
-                  ],
-                ),
-                const SizedBox(
-                  width: 400,
-                  child: Divider(
-                    height: 60,
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                      'Choose the source and the destination language. '),
+                  const Text(
+                      'If you are adding a new script for the first time, click the plus to add the language abbreviation.'),
+                  const SizedBox(
+                    height: 20,
                   ),
-                ),
-                SizedBox(
-                  width: 374,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                          'Replace existing transliterations for destination'),
-                      Switch(
-                          value: replaceExistingTransliterations,
-                          onChanged: (value) {
-                            setState(() {
-                              replaceExistingTransliterations = value;
-                            });
-                          })
+                      const SizedBox(width: 100, child: Text('Source')),
+                      const SizedBox(width: 100),
+                      DropdownMenu(
+                        enabled: hasLanguages,
+                        controller: sourceController,
+                        initialSelection: source,
+                        dropdownMenuEntries: dropdownMenuEntries(),
+                        onSelected: (value) {
+                          setState(() {
+                            source = value!;
+                          });
+                          checkForNavEnabling();
+                        },
+                      ),
+                      const SizedBox(
+                        width: 20,
+                      ),
+                      const SizedBox(
+                        width: 40,
+                      )
                     ],
                   ),
-                ),
-              ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(width: 100, child: Text('Destination')),
+                      const SizedBox(width: 100),
+                      DropdownMenu(
+                        enabled: hasLanguages,
+                        controller: destController,
+                        initialSelection: dest,
+                        dropdownMenuEntries: dropdownMenuEntries(),
+                        onSelected: (value) {
+                          setState(() {
+                            newLanguage = false;
+                            dest = value!;
+                          });
+
+                          checkForNavEnabling();
+                        },
+                      ),
+                      const SizedBox(
+                        width: 20,
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: IconButton.filled(
+                            onPressed: () {
+                              showDialog(
+                                  barrierDismissible: true,
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    newLangSubmit() {
+                                      setState(() {
+                                        newLanguage = true;
+                                        destController.text =
+                                            newLangController.text;
+                                        dest = newLangController.text;
+                                        newLangController.text = '';
+                                      });
+                                      checkForNavEnabling();
+                                      Navigator.of(context).pop();
+                                    }
+
+                                    return Center(
+                                        child: Container(
+                                            padding: const EdgeInsets.all(20),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(20.0),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondaryContainer,
+                                            ),
+                                            height: 200,
+                                            width: 250,
+                                            child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const Text(
+                                                      'Add a new language code here'),
+                                                  const SizedBox(
+                                                    height: 20,
+                                                  ),
+                                                  TextFormField(
+                                                    autofocus: true,
+                                                    textCapitalization:
+                                                        TextCapitalization.none,
+                                                    autocorrect: false,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      filled: true,
+                                                      hintText: 'new lang code',
+                                                    ),
+                                                    controller:
+                                                        newLangController,
+                                                    // The validator receives the text that the user has entered.
+                                                    validator: (value) {
+                                                      if (value == null ||
+                                                          value.isEmpty) {
+                                                        return 'Please enter some text';
+                                                      } else {
+                                                        return null;
+                                                      }
+                                                    },
+                                                    onFieldSubmitted: (value) =>
+                                                        newLangSubmit(),
+                                                  ),
+                                                  const SizedBox(
+                                                    height: 20,
+                                                  ),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      ElevatedButton(
+                                                          onPressed: () =>
+                                                              newLangSubmit(),
+                                                          child:
+                                                              const Text('OK')),
+                                                      const SizedBox(
+                                                        width: 20,
+                                                      ),
+                                                      ElevatedButton(
+                                                          onPressed: () {
+                                                            Navigator.of(
+                                                                    context)
+                                                                .pop();
+                                                          },
+                                                          child: const Text(
+                                                              'Cancel')),
+                                                    ],
+                                                  ),
+                                                ])));
+                                  });
+                            },
+                            icon: const Icon(Icons.add)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(
+                    width: 400,
+                    child: Divider(
+                      height: 60,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 374,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                            'Replace existing transliterations for destination'),
+                        Switch(
+                            value: replaceExistingTransliterations,
+                            onChanged: (value) {
+                              setState(() {
+                                replaceExistingTransliterations = value;
+                              });
+                            })
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
           }
         });
@@ -566,7 +609,7 @@ class _GetStringsState extends State<GetStrings> {
   Future getStringsToTranslate() async {
     if (menuItemsToTransliterate.isEmpty) {
       //Two cases - one where we're redoing all the transliterations, one where we're leaving the ones that are done already.
-      if (replaceExistingTransliterations) {
+      if (replaceExistingTransliterations || newLanguage) {
         //If we're replacing all, go ahead and get rid of the old ones in the main list.
         originalFileContents.removeWhere((element) => element.langCode == dest);
 
@@ -623,17 +666,16 @@ class _GetStringsState extends State<GetStrings> {
     stringInit = getStringsToTranslate();
     super.initState();
   }
-  //TODO practically speaking, pages 0 and 1 work alright in delaying the enabled nav button.
-  //page 2 not working well.
+
+  //page 2
 
   @override
   Widget build(BuildContext context) {
+    NavController navButtons =
+        Provider.of<NavController>(context, listen: false);
+    PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);
     //This is for the nav buttons
-    Provider.of<PageTracker>(context, listen: true).addListener(() {
-      NavController navButtons =
-          Provider.of<NavController>(context, listen: false);
-      PageTracker pageTracker =
-          Provider.of<PageTracker>(context, listen: false);
+    checkEnabling() {
       if (pageTracker.currentPage == 2) {
         if (menuItemsTransliteratedAsString != '') {
           navButtons.setEnabledAndNotify(true);
@@ -641,22 +683,12 @@ class _GetStringsState extends State<GetStrings> {
           navButtons.setEnabledAndNotify(false);
         }
       }
-    });
+    }
 
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   print('callback in page three');
-    //   NavController navButtons =
-    //       Provider.of<NavController>(context, listen: false);
-    //   PageTracker pageTracker =
-    //       Provider.of<PageTracker>(context, listen: false);
-    //   if (pageTracker.currentPage == 2) {
-    //     if (menuItemsTransliteratedAsString != '') {
-    //       navButtons.setEnabledAndNotify(true);
-    //     } else {
-    //       navButtons.setEnabled(false);
-    //     }
-    //   }
-    // });
+    Provider.of<PageTracker>(context, listen: true).addListener(() {
+      print('listener in page 3');
+      checkEnabling();
+    });
 
     int minLines = 50;
     return FutureBuilder(
@@ -713,20 +745,13 @@ class _GetStringsState extends State<GetStrings> {
                                     maxLines: minLines,
                                     textCapitalization: TextCapitalization.none,
                                     autocorrect: false,
-                                    initialValue:
-                                        menuItemsToTransliterateAsString,
+                                    initialValue: menuItemsToTransliterateAsString
+                                            .isNotEmpty
+                                        ? menuItemsToTransliterateAsString
+                                        : "No menu translations to translitarate.\n\nUsually this is because there are no untransliterated strings and you haven't checked the 'replace existing transliterations' option. ",
                                     decoration: const InputDecoration(
                                       filled: true,
                                     ),
-                                    // controller: sourceController,
-                                    // The validator receives the text that the user has entered.
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please enter some text';
-                                      } else {
-                                        return null;
-                                      }
-                                    },
                                   ),
                                 ]),
                               ),
@@ -739,7 +764,7 @@ class _GetStringsState extends State<GetStrings> {
                             child: TextFormField(
                               onChanged: (value) {
                                 menuItemsTransliteratedAsString = value;
-                                setState(() {});
+                                checkEnabling();
                               },
 
                               minLines: minLines,
@@ -811,16 +836,32 @@ class _VerifyStringsState extends State<VerifyStrings> {
         menuItemsTransliteratedAsList.length) {
       return Column(
         children: [
+          const SizedBox(
+            height: 20,
+          ),
           const Text(
               'Check out the results to make sure they are lining up correctly: '),
           Expanded(
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: menuItemsToTransliterate.length,
-              itemBuilder: (context, index) {
-                return listItem(menuItemsToTransliterate[index].contents,
-                    menuItemsTransliteratedAsList[index]);
-              },
+            child: Padding(
+              padding: const EdgeInsets.only(
+                top: 10.0,
+                left: 10,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius:
+                      const BorderRadius.only(topLeft: Radius.circular(10)),
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                ),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: menuItemsToTransliterate.length,
+                  itemBuilder: (context, index) {
+                    return listItem(menuItemsToTransliterate[index].contents,
+                        menuItemsTransliteratedAsList[index]);
+                  },
+                ),
+              ),
             ),
           ),
         ],
@@ -908,27 +949,36 @@ class _CreateNewFileState extends State<CreateNewFile> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else {
-            return Center(
-              child: FilledButton.icon(
-                  onPressed: () async {
-                    //filename
-                    final DateTime now = DateTime.now();
-                    final String formattedDate = formatDate(now);
-                    final String filename = 'exported SAB menu $formattedDate';
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FilledButton.icon(
+                    onPressed: () async {
+                      //filename
+                      final DateTime now = DateTime.now();
+                      final String formattedDate = formatDate(now);
+                      final String filename =
+                          'exported SAB menu $formattedDate';
 
-                    //data
-                    final List<int> utf8Bytes =
-                        utf8.encode(snapshot.data.toString()).toList();
-                    final Uint8List utf8list = Uint8List.fromList(utf8Bytes);
+                      //data
+                      final List<int> utf8Bytes =
+                          utf8.encode(snapshot.data.toString()).toList();
+                      final Uint8List utf8list = Uint8List.fromList(utf8Bytes);
 
-                    await FileSaver.instance.saveFile(
-                        name: filename,
-                        ext: 'txt',
-                        bytes: utf8list,
-                        mimeType: MimeType.text);
-                  },
-                  icon: const Icon(Icons.download),
-                  label: const Text("Download new file")),
+                      await FileSaver.instance.saveFile(
+                          name: filename,
+                          ext: 'txt',
+                          bytes: utf8list,
+                          mimeType: MimeType.text);
+                    },
+                    icon: const Icon(Icons.download),
+                    label: const Text("Download new file")),
+                const SizedBox(
+                  height: 20,
+                ),
+                const Text(
+                    'Now download the new transliteration file and import it into SAB.'),
+              ],
             );
           }
         });

@@ -6,5 +6,5 @@ A utility to help app builders quickly transliterate menus
 
 On the web at https://coreygarrett.org/sab_menu/ 
 
-Note: build with `flutter build web --web-renderer canvaskit` for *feedback* plugin. 
+Note: build with `flutter build web --web-renderer canvaskit --base-href '/sab_menu/'` for *feedback* plugin. 
 https://pub.dev/packages/feedback#:~:text=Then%2C%20run%20flutter,Flutters%20documentation.

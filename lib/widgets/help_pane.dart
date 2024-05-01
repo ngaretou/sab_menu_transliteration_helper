@@ -131,7 +131,9 @@ class HelpText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget htmlSection(String url) {
+    PageTracker pageTracker = Provider.of<PageTracker>(context, listen: true);
+
+    Widget htmlSection(Key key, String url) {
       //This is where we grab the HTML from the asset folder
       Future<String?> fetchHtmlSection(String url) async {
         String htmlSection =
@@ -160,8 +162,12 @@ class HelpText extends StatelessWidget {
     }
 
     // return Text('help');
+
     return SingleChildScrollView(
-      child: htmlSection("html/help.html"),
+      child: AnimatedSwitcher(
+          duration: Durations.extralong4,
+          child: htmlSection(
+              UniqueKey(), "assets/html/${pageTracker.currentPage}.html")),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
-import 'package:feedback/feedback.dart';
+// import 'package:feedback/feedback.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../main.dart';
@@ -61,23 +61,23 @@ class _NavBarState extends State<NavBar> {
                   helpPane.closeHelpPane();
                 }
               }),
-          ListTile(
-              leading: const Icon(Icons.feedback),
-              title: const Text('Feedback'),
-              onTap: () => BetterFeedback.of(context).show((feedback) async {
-                    // draft an email and send to developer
-                    // final screenshotFilePath =
-                    //     await writeImageToStorage(feedback.screenshot);
+          // ListTile(
+          //     leading: const Icon(Icons.feedback),
+          //     title: const Text('Feedback'),
+          //     onTap: () => BetterFeedback.of(context).show((feedback) async {
+          //           // draft an email and send to developer
+          //           // final screenshotFilePath =
+          //           //     await writeImageToStorage(feedback.screenshot);
 
-                    // final Email email = Email(
-                    //   body: feedback.text,
-                    //   subject: 'App Feedback',
-                    //   recipients: ['john.doe@flutter.dev'],
-                    //   attachmentPaths: [screenshotFilePath],
-                    //   isHTML: false,
-                    // );
-                    // await FlutterEmailSender.send(email);
-                  })),
+          //           // final Email email = Email(
+          //           //   body: feedback.text,
+          //           //   subject: 'App Feedback',
+          //           //   recipients: ['john.doe@flutter.dev'],
+          //           //   attachmentPaths: [screenshotFilePath],
+          //           //   isHTML: false,
+          //           // );
+          //           // await FlutterEmailSender.send(email);
+          //         })),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info),

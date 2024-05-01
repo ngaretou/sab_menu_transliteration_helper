@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help</title>
+</head>
+<body>
+    
+    <h2>Download the file and import to SAB</h2>
+    You should now have a good file you can import back into SAB in Appearance/Interface in the Translations tab. 
+    If you have not yet added your transliteration into SAB, just be sure to add the language in Appearance/Interface in the Lanugages tab with the same language code. 
+<br><br>
+If you see problems with variables like <i>%s</i> or <i>%book</i>, you can deal with them in TECkit map by adding something like this after the SFM section:
+<br><br>
+<tt><pre>
+----------------------------------------
+; ----------<br>
+; Scripture App Builder (SAB) related <br>
+; ----------<br>
+'%,d'                      >       '%,d'<br>
+'%book '                   >       '%book '<br>
+'%chapter '                >       '%chapter '<br>
+'%s'                       >       '%s'<br>
+----------------------------------------
+</pre></tt>
+<br><br>
+    If something goes wrong or takes some time to figure out, you can go back to your earlier exported file. 
+</body>
+</html>

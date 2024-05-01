@@ -9,6 +9,9 @@ import 'widgets/body.dart';
 import 'widgets/nav.dart';
 import 'providers/nav_controller.dart';
 
+//TODO edit nalysis options to remove print statements
+//TODO configure Feedback plugin
+
 late Box userPrefsBox;
 
 void main() async {
