@@ -161,8 +161,6 @@ class HelpText extends StatelessWidget {
       );
     }
 
-    // return Text('help');
-
     return SingleChildScrollView(
       child: AnimatedSwitcher(
           duration: Durations.extralong4,

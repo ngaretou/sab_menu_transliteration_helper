@@ -8,6 +8,7 @@ import 'theme.dart';
 import 'widgets/body.dart';
 import 'widgets/nav.dart';
 import 'providers/nav_controller.dart';
+import 'providers/logic.dart';
 
 //TODO edit nalysis options to remove print statements
 //TODO configure Feedback plugin
@@ -31,6 +32,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (ctx) => PageTracker(),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => Logic(),
         ),
       ], child: const MainApp()),
     ),

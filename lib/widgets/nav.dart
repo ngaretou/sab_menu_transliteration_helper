@@ -61,38 +61,15 @@ class _NavBarState extends State<NavBar> {
                   helpPane.closeHelpPane();
                 }
               }),
-          // ListTile(
-          //     leading: const Icon(Icons.feedback),
-          //     title: const Text('Feedback'),
-          //     onTap: () => BetterFeedback.of(context).show((feedback) async {
-          //           // draft an email and send to developer
-          //           // final screenshotFilePath =
-          //           //     await writeImageToStorage(feedback.screenshot);
-
-          //           // final Email email = Email(
-          //           //   body: feedback.text,
-          //           //   subject: 'App Feedback',
-          //           //   recipients: ['john.doe@flutter.dev'],
-          //           //   attachmentPaths: [screenshotFilePath],
-          //           //   isHTML: false,
-          //           // );
-          //           // await FlutterEmailSender.send(email);
-          //         })),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
-            // trailing: Icon(
-            //   Icons.open_in_new,
-            // ),
             onTap: () => showAbout(context),
           ),
           ListTile(
             leading: const Icon(Icons.code),
             title: const Text('Source Code'),
-            // trailing: Icon(
-            //   Icons.open_in_new,
-            // ),
             onTap: () async {
               const url =
                   'https://github.com/ngaretou/sab_menu_transliteration_helper';
