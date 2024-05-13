@@ -12,6 +12,7 @@ dependencies:
   file_saver: ^0.2.12
   flutter:
     sdk: flutter
+  flutter_dropzone: ^4.0.0
   flutter_html: ^3.0.0-beta.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
@@ -20,6 +21,7 @@ dependencies:
   smooth_page_indicator: ^1.1.0
   super_drag_and_drop: ^0.8.12
   url_launcher: ^6.2.6
+  xml: ^6.5.0
 
 dev_dependencies:
   flutter_test:

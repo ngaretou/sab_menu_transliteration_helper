@@ -1,20 +1,36 @@
 import 'package:flutter/material.dart';
+import 'dart:core';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:collection';
 
-import 'file_contents.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:xml/xml.dart';
+
+class Transliteration {
+  Key key;
+  String translation;
+  String? transliteration;
+
+  Transliteration({
+    required this.key,
+    required this.translation,
+    this.transliteration,
+  });
+}
 
 class Logic extends ChangeNotifier {
-//These are variables we'll use in all pages
-  List<String> fileAsList = [];
-  List<FileContents> originalFileContents = [];
+  //These are variables we'll use in all pages
+  String originalFileName = '';
+  XmlDocument appDef =
+      XmlDocument.parse('<?xml version="1.0" encoding="UTF-8"?><root></root>');
   Set languages = {};
   Set languagesActive = {};
-  List<FileContents> menuItemsToTransliterate = [];
+  List<Transliteration> listTransliterations = [];
   String menuItemsToTransliterateAsString = '';
-  String menuItemsTransliteratedAsString = '';
-  List<String> menuItemsTransliteratedAsList = [];
-  List<String> menuItems = []; //the section headers
-  String textFile = ''; //The whole text file
+
+  List<String> listTransliterationStrings =
+      []; // simple list of bare transliterations
   String source = ''; //The source lang code
   String dest = ''; //destination lang code
   bool newLanguage = false; //if this is a user-entered new language code
@@ -36,91 +52,81 @@ class Logic extends ChangeNotifier {
     notifyListeners();
   }
 
-  setMenuItemsTransliteratedAsString(String incoming) {
-    menuItemsTransliteratedAsString = incoming;
-  }
+  checkAndReadFile<bool>(
+      BuildContext context, String fileName, Uint8List fileAsBytes) {
+    //in case we're doing multiple files, reset all data if dropping a new file in
 
-  //
-
-  resetData() {
-    fileAsList = [];
-    originalFileContents = [];
-    menuItemsToTransliterate = [];
-    menuItemsToTransliterateAsString = '';
-    menuItemsTransliteratedAsString = '';
-    menuItemsTransliteratedAsList = [];
-    menuItems = []; //the section headers
-    textFile = ''; //The whole text file
+    // reset all data if dropping a new file in
+    originalFileName = '';
+    appDef = XmlDocument.parse(
+        '<?xml version="1.0" encoding="UTF-8"?><root></root>');
+    listTransliterations = [];
     source = ''; //The source lang code
     dest = ''; //destination lang code
     replaceExistingTransliterations = false;
-  }
 
-  readInData<bool>(BuildContext context, String fileAsString) {
-    //in case we're doing multiple files, reset all data if dropping a new file in
+    // helper function to get the extension
+    String getFileExtension(String fileName) {
+      if (fileName.contains('.')) {
+        String extension = fileName.split('.').last;
 
-    resetData();
-    textFile = fileAsString;
-
-    //TODO check if the file is giving the right kind of content before returning true
-    //if (right kind of content) {do what's here} else {Are you sure?}
-    fileAsList = fileAsString.split('\n');
-
-    //Brief check mark feedback for user
-    showDialog(
-        barrierDismissible: true,
-        context: context,
-        builder: (BuildContext context) {
-          Future.delayed(
-              Durations.extralong2, () => Navigator.of(context).pop());
-
-          return Center(
-              child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20.0),
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                  ),
-                  height: 80,
-                  width: 128,
-                  child: const Icon(Icons.check)));
-        });
-    return true;
-  }
-
-  Future parseStringFile() async {
-    List<String> langCodesList = [];
-    String currentSection = 'header';
-
-    for (String line in fileAsList) {
-      final RegExpMatch? match = RegExp(r'(^)(\w+)(: )(.*)').firstMatch(line);
-      String? langCodeToAdd;
-      String contentsToAdd = '';
-
-      if (match != null) {
-        //get lang codes
-        if (match.group(2) != null) {
-          langCodesList.add(match.group(2)!);
-        }
-        langCodeToAdd = match.group(2)!;
-        contentsToAdd = match.group(4)!;
-      } else if (line.startsWith('\$')) {
-        //Create the list of menuItems like
-        //$ Menu_Bible
-        //$ Menu_Contents
-        currentSection = line;
-        menuItems.add(currentSection);
-        langCodeToAdd = null;
-        contentsToAdd = line;
-      } else {
-        langCodeToAdd = null;
-        contentsToAdd = line;
+        originalFileName =
+            fileName.substring(0, fileName.length - extension.length - 1);
+        return extension;
       }
+      return ''; // Return an empty string if there is no extension
+    }
 
-      originalFileContents.add(FileContents(
-          key: UniqueKey(),
-          langCode: langCodeToAdd,
-          contents: contentsToAdd,
-          section: currentSection));
+    // if appDef file, continue, but if not, halt.
+    final String ext = getFileExtension(fileName);
+    if (ext == 'appDef') {
+      //Brief check mark feedback for user
+      showDialog(
+          barrierDismissible: true,
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(
+                Durations.extralong2, () => Navigator.of(context).pop());
+
+            return Center(
+                child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20.0),
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                    height: 80,
+                    width: 128,
+                    child: const Icon(Icons.check)));
+          });
+      // Get our data ready to go as XML
+      String fileAsString = utf8.decode(fileAsBytes);
+      appDef = XmlDocument.parse(fileAsString);
+
+      return true;
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Unsupported File Type - import a SAB appDef file')));
+      return false;
+    }
+  }
+
+  Future parseXMLLangs() async {
+    List<String> langCodesList = [];
+
+    Iterable<XmlElement> xmlLangs = appDef
+        .getElement('app-definition')!
+        .getElement('interface-languages')!
+        .getElement('writing-systems')!
+        .findAllElements('writing-system');
+
+    //Loop through langs gathering info about each
+    for (var lang in xmlLangs) {
+      String? enabled = lang.getAttribute('enabled')?.toString();
+
+      if (enabled != 'false') {
+        String langCode = lang.getAttribute('code').toString();
+        langCodesList.add(langCode);
+      }
     }
 
     //get langs to unique values
@@ -143,113 +149,130 @@ class Logic extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future getStringsToTranslate() async {
-    if (menuItemsToTransliterate.isEmpty) {
-      //Two cases - one where we're redoing all the transliterations, one where we're leaving the ones that are done already.
-      if (replaceExistingTransliterations || newLanguage) {
-        //If we're replacing all, go ahead and get rid of the old ones in the main list.
-        originalFileContents.removeWhere((element) => element.langCode == dest);
+  /* 
+  At this point, all we have is the source and dest languages. 
+  Make a new list of the Transliteration class that has the data we need 
+  and along the way put bookmarks in our in-memory copy of the appDef so we can go back to them later.
+  */
+  Future initializeTransliterationList() async {
+    List<XmlElement> xmlSourceTranslations = [];
+    // Two cases - one where we're redoing all the transliterations,
+    // one where we're leaving the translations that are done already.
+    // if we do not want to replace any existing translations,
+    // then get the ones that already contain dest
 
-        //And add all the source menuitems.
-        menuItemsToTransliterate.addAll(originalFileContents
-            .where((element) => element.langCode == source));
+    if (!replaceExistingTransliterations) {
+      xmlSourceTranslations = appDef
+          .findAllElements('translation')
+          .where((element) =>
+              // lang is the source
+              (element.getAttribute('lang') == source) &&
+              // and innertext is not empty
+              element.innerText != '' &&
+              // all the sibling elements
+              (element.siblingElements.every((element) {
+                //either 1) don't have the dest lang code
+                return (element.getAttribute('lang') != dest ||
+                    //or 2) have the lang code but the content is empty
+                    element.getAttribute('lang') == dest &&
+                        element.innerText == '');
+              })))
+          .toList();
+    } else {
+      // if we do want to replace all, just keep going.
+      // These are all the XML nodes that have source lang AND are not empty
+      xmlSourceTranslations = appDef
+          .findAllElements('translation')
+          .where((element) =>
+              (element.getAttribute('lang') == source) &&
+              element.innerText != '')
+          .toList();
+    }
+
+    for (XmlElement translation in xmlSourceTranslations) {
+      Key key = UniqueKey();
+      /*
+    Now get those XmlElements into the main working list. This will leave the whole
+    transliterations 'column' empty. 
+    */
+      listTransliterations
+          .add(Transliteration(key: key, translation: translation.innerText));
+
+      // Also get those transliterations into a displayable String
+      String carriage = '\n';
+
+      if (menuItemsToTransliterateAsString == '') {
+        menuItemsToTransliterateAsString = translation.innerText;
       } else {
-        //If we're just transliterating the ones where there is no current transliteration....
-        //first grab the menuitems section by section
-        for (String menuItem in menuItems) {
-          List<FileContents> currentSection = originalFileContents
-              .where((element) => element.section == menuItem)
-              .toList();
-
-          //Does it have the source lang code?
-          bool containsSource = currentSection
-              .any((element) => element.langCode!.contains(source));
-
-          //Does it have the dest lang code?
-          bool containsDest =
-              currentSection.any((element) => element.langCode!.contains(dest));
-
-          //If it has the source but not the destination, add it to strings to translate
-          if (containsSource && !containsDest) {
-            menuItemsToTransliterate.add(currentSection
-                .firstWhere((element) => element.langCode!.contains(source)));
-          }
-        }
+        menuItemsToTransliterateAsString =
+            '$menuItemsToTransliterateAsString$carriage${translation.innerText}';
       }
 
-      //cleanup - if it's just the label with no actual text
-      menuItemsToTransliterate.removeWhere((element) => element.contents == '');
+      // And leave those bookmarks; this will look like
+      // <translation lang="(dest)">(the unique key)</translation>
+      // so later on all we have to do is look for that key when adding in the transliterations
 
-      //now get the contents into a String
-      for (FileContents item in menuItemsToTransliterate) {
-        String carriage = '\n';
-
-        //Note well this is RegExp with variable
-        // RegExp regExp = RegExp(r'(' + searchStringForSource + r')' + r'(.*)');
-
-        //this is the first one only
-        if (menuItemsToTransliterateAsString == '') {
-          menuItemsToTransliterateAsString = item.contents;
-        } else {
-          menuItemsToTransliterateAsString =
-              '$menuItemsToTransliterateAsString$carriage${item.contents}';
+      if (translation.siblings
+          .any((element) => element.getAttribute('lang') == dest)) {
+        try {
+          final target = translation.siblings
+              .firstWhere((element) => element.getAttribute('lang') == dest);
+          target.innerText = key.toString();
+        } catch (e) {
+          debugPrint(e.toString());
         }
+      } else {
+        final builder = XmlBuilder();
+        builder.element('translation', nest: () {
+          builder.attribute('lang', dest);
+          builder.text(key.toString());
+        });
+        translation.siblings.add(builder.buildFragment());
       }
     }
   }
 
-  splitMenuItemsString() {
-    menuItemsTransliteratedAsList = menuItemsTransliteratedAsString.split('\n');
+  updateTransliterationStrings(String incoming) {
+    listTransliterationStrings = incoming.split('\n');
   }
 
   Future<String> createNewFile() async {
-    Future<List<FileContents>> transliterationsToBigList() async {
-      List<FileContents> newFileContents = [];
-      int num = menuItemsToTransliterate.length;
-      newFileContents.addAll(originalFileContents);
+    String fileContents = appDef.toXmlString(pretty: true);
 
-      //put the transliterated menuItems in the big list
-      for (var i = 0; i < num; i++) {
-        int targetIndex = newFileContents.indexWhere(
-            (element) => element.key == menuItemsToTransliterate[i].key);
+    // for (var i = 0; i < listTransliterations.length; i++) {
+    List<String> listOfTransliterations = listTransliterations
+        .map((transliteration) => transliteration.key.toString())
+        .toList();
 
-        FileContents newEntry = FileContents(
-            key: UniqueKey(),
-            langCode: dest,
-            contents: menuItemsTransliteratedAsList[i],
-            section: menuItemsToTransliterate[i].section);
+    Map<String, String> map =
+        Map.fromIterables(listOfTransliterations, listTransliterationStrings);
 
-        newFileContents.insert(targetIndex + 1, newEntry);
-      }
-      return newFileContents;
-    }
+    String result = map.entries
+        .fold(fileContents, (prev, e) => prev.replaceAll(e.key, e.value));
 
-    Future<String> convertListToString(List<FileContents> input) async {
-      String listContentsAsString = '';
-      //Convert the big list to a string
-      for (FileContents item in input) {
-        String carriage = '\n';
-        //this is the first one only
-        if (listContentsAsString == '') {
-          listContentsAsString = item.contents;
-        } else {
-          String line = '';
+    return result;
+  }
 
-          if (item.langCode == null) {
-            line = item.contents;
-          } else {
-            {
-              line = '${item.langCode!}: ${item.contents}';
-            }
-          }
+  Future saveFile(BuildContext context, String fileContents) async {
+    final DateTime now = DateTime.now();
+    final String formattedDate = formatDate(now);
+    final String filename = '$originalFileName $formattedDate';
 
-          listContentsAsString = '$listContentsAsString$carriage$line';
-        }
-      }
+    //data
+    final List<int> utf8Bytes = utf8.encode(fileContents).toList();
+    final Uint8List utf8list = Uint8List.fromList(utf8Bytes);
 
-      return listContentsAsString;
-    }
+    await FileSaver.instance.saveFile(
+        name: filename,
+        ext: 'appDef',
+        bytes: utf8list,
+        mimeType: MimeType.text);
+  }
 
-    return await convertListToString(await transliterationsToBigList());
+  String formatDate(DateTime date) {
+    final String month = date.month.toString().padLeft(2, '0');
+    final String day = date.day.toString().padLeft(2, '0');
+    final String year = date.year.toString();
+    return '$month $day $year';
   }
 }

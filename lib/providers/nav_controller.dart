@@ -40,7 +40,6 @@ class NavController extends ChangeNotifier {
   }
 
   void setEnabledAndNotify(bool incoming) {
-    print('setting nav button enabled $incoming');
     enabled = incoming;
     notifyListeners();
   }
@@ -49,7 +48,6 @@ class NavController extends ChangeNotifier {
 class PageTracker extends ChangeNotifier {
   int currentPage = 0;
   setPage(int incoming) {
-    print('pageTracker provider firing on page ${incoming + 1}');
     currentPage = incoming;
     notifyListeners();
   }

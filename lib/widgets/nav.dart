@@ -81,6 +81,20 @@ class _NavBarState extends State<NavBar> {
               }
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.code),
+            title: const Text('Feedback'),
+            onTap: () async {
+              const url =
+                  'https://github.com/ngaretou/sab_menu_transliteration_helper/issues';
+              if (await canLaunchUrl(Uri.parse(url))) {
+                await launchUrl(Uri.parse(url),
+                    mode: LaunchMode.platformDefault);
+              } else {
+                throw 'Could not launch $url';
+              }
+            },
+          ),
           const SizedBox(
             height: 20,
           )

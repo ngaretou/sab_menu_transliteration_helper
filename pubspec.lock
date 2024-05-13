@@ -150,6 +150,30 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_dropzone:
+    dependency: "direct main"
+    description:
+      name: flutter_dropzone
+      sha256: e00e623451f40e68593d69c7ea60daf956451d1b1769b79f7aa73d26b86b0324
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
+  flutter_dropzone_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_dropzone_platform_interface
+      sha256: b4e2df75364bab2f4c3ca32b87193267d786b6e158c3f345c3a1daeb911d82b9
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.6"
+  flutter_dropzone_web:
+    dependency: transitive
+    description:
+      name: flutter_dropzone_web
+      sha256: "62211c1e8dd9b55f872206d6b27bb71e20bf0db1f1ab481a963fcbaa7240ff23"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
   flutter_html:
     dependency: "direct main"
     description:
@@ -397,6 +421,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.1"
+  petitparser:
+    dependency: transitive
+    description:
+      name: petitparser
+      sha256: c15605cd28af66339f8eb6fbe0e541bfe2d1b72d5825efc6598f3e0a31b9ad27
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.2"
   pixel_snap:
     dependency: transitive
     description:
@@ -650,6 +682,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
+  xml:
+    dependency: "direct main"
+    description:
+      name: xml
+      sha256: b015a8ad1c488f66851d762d3090a21c600e479dc75e68328c52774040cf9226
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.5.0"
 sdks:
   dart: ">=3.3.2 <4.0.0"
   flutter: ">=3.19.0"

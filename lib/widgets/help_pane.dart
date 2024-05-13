@@ -143,21 +143,19 @@ class HelpText extends StatelessWidget {
 
       return FutureBuilder(
         future: fetchHtmlSection(url),
-        builder: (ctx, snapshot) => snapshot.connectionState ==
-                ConnectionState.waiting
-            ? const Center(child: CircularProgressIndicator())
-            //this is actually where the business happens; HTML just takes the data and renders it
-
-            : html.Html(
-                data: snapshot.data.toString(),
-                onLinkTap: (String? url, Map<String, String> attributes,
-                    element) async {
-                  if (url != null) {
-                    await canLaunchUrl(Uri.parse(url))
-                        ? await launchUrl(Uri.parse(url))
-                        : throw 'Could not launch $url';
-                  }
-                }),
+        builder: (ctx, snapshot) =>
+            snapshot.connectionState == ConnectionState.waiting
+                ? const Center(child: CircularProgressIndicator())
+                : html.Html(
+                    data: snapshot.data.toString(),
+                    onLinkTap: (String? url, Map<String, String> attributes,
+                        element) async {
+                      if (url != null) {
+                        await canLaunchUrl(Uri.parse(url))
+                            ? await launchUrl(Uri.parse(url))
+                            : throw 'Could not launch $url';
+                      }
+                    }),
       );
     }
 
