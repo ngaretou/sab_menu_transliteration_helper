@@ -29,7 +29,7 @@ class _NavBarState extends State<NavBar> {
             height: 20,
           )),
           ListTile(
-            leading: const Icon(Icons.dark_mode),
+            leading: const Icon(Icons.dark_mode_outlined),
             title: const Text('Dark Mode'),
             trailing: Switch(
                 value: Theme.of(context).brightness == Brightness.dark
@@ -50,7 +50,7 @@ class _NavBarState extends State<NavBar> {
           ),
           const Divider(),
           ListTile(
-              leading: const Icon(Icons.help),
+              leading: const Icon(Icons.help_outline),
               title: const Text('Help'),
               onTap: () {
                 HelpPaneController helpPane =
@@ -63,16 +63,16 @@ class _NavBarState extends State<NavBar> {
               }),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.info),
+            leading: const Icon(Icons.info_outline),
             title: const Text('About'),
             onTap: () => showAbout(context),
           ),
           ListTile(
-            leading: const Icon(Icons.code),
-            title: const Text('Source Code'),
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text('Feedback'),
             onTap: () async {
               const url =
-                  'https://github.com/ngaretou/sab_menu_transliteration_helper';
+                  'https://github.com/ngaretou/sab_menu_transliteration_helper/issues';
               if (await canLaunchUrl(Uri.parse(url))) {
                 await launchUrl(Uri.parse(url),
                     mode: LaunchMode.platformDefault);
@@ -83,10 +83,10 @@ class _NavBarState extends State<NavBar> {
           ),
           ListTile(
             leading: const Icon(Icons.code),
-            title: const Text('Feedback'),
+            title: const Text('Source Code'),
             onTap: () async {
               const url =
-                  'https://github.com/ngaretou/sab_menu_transliteration_helper/issues';
+                  'https://github.com/ngaretou/sab_menu_transliteration_helper';
               if (await canLaunchUrl(Uri.parse(url))) {
                 await launchUrl(Uri.parse(url),
                     mode: LaunchMode.platformDefault);

@@ -22,7 +22,9 @@ class Transliteration {
 class Logic extends ChangeNotifier {
   //These are variables we'll use in all pages
   String originalFileName = '';
-  XmlDocument appDef =
+  XmlDocument origAppDef =
+      XmlDocument.parse('<?xml version="1.0" encoding="UTF-8"?><root></root>');
+  XmlDocument workingAppDef =
       XmlDocument.parse('<?xml version="1.0" encoding="UTF-8"?><root></root>');
   Set languages = {};
   Set languagesActive = {};
@@ -47,6 +49,10 @@ class Logic extends ChangeNotifier {
     notifyListeners();
   }
 
+  resetListTransliterationStrings() {
+    listTransliterationStrings = [];
+  }
+
   setReplaceExistingTransliterations(bool bool) {
     replaceExistingTransliterations = bool;
     notifyListeners();
@@ -58,12 +64,15 @@ class Logic extends ChangeNotifier {
 
     // reset all data if dropping a new file in
     originalFileName = '';
-    appDef = XmlDocument.parse(
+    origAppDef = XmlDocument.parse(
+        '<?xml version="1.0" encoding="UTF-8"?><root></root>');
+    workingAppDef = XmlDocument.parse(
         '<?xml version="1.0" encoding="UTF-8"?><root></root>');
     listTransliterations = [];
     source = ''; //The source lang code
     dest = ''; //destination lang code
     replaceExistingTransliterations = false;
+    menuItemsToTransliterateAsString = '';
 
     // helper function to get the extension
     String getFileExtension(String fileName) {
@@ -100,7 +109,7 @@ class Logic extends ChangeNotifier {
           });
       // Get our data ready to go as XML
       String fileAsString = utf8.decode(fileAsBytes);
-      appDef = XmlDocument.parse(fileAsString);
+      origAppDef = XmlDocument.parse(fileAsString);
 
       return true;
     } else {
@@ -113,7 +122,7 @@ class Logic extends ChangeNotifier {
   Future parseXMLLangs() async {
     List<String> langCodesList = [];
 
-    Iterable<XmlElement> xmlLangs = appDef
+    Iterable<XmlElement> xmlLangs = origAppDef
         .getElement('app-definition')!
         .getElement('interface-languages')!
         .getElement('writing-systems')!
@@ -138,7 +147,8 @@ class Logic extends ChangeNotifier {
 
   chooseActiveLanguages(
       String sourceControllerText, String destControllerText) {
-    languagesActive = languages;
+    languagesActive = {};
+    languagesActive.addAll(languages);
     languagesActive.removeWhere((element) =>
         element == sourceControllerText || element == destControllerText);
   }
@@ -155,14 +165,20 @@ class Logic extends ChangeNotifier {
   and along the way put bookmarks in our in-memory copy of the appDef so we can go back to them later.
   */
   Future initializeTransliterationList() async {
+    print('initialize transliteration list');
     List<XmlElement> xmlSourceTranslations = [];
+    menuItemsToTransliterateAsString = '';
+
+    listTransliterations = [];
+    workingAppDef = XmlDocument.parse(origAppDef.toXmlString());
+
     // Two cases - one where we're redoing all the transliterations,
     // one where we're leaving the translations that are done already.
     // if we do not want to replace any existing translations,
     // then get the ones that already contain dest
 
     if (!replaceExistingTransliterations) {
-      xmlSourceTranslations = appDef
+      xmlSourceTranslations = workingAppDef
           .findAllElements('translation')
           .where((element) =>
               // lang is the source
@@ -181,7 +197,7 @@ class Logic extends ChangeNotifier {
     } else {
       // if we do want to replace all, just keep going.
       // These are all the XML nodes that have source lang AND are not empty
-      xmlSourceTranslations = appDef
+      xmlSourceTranslations = workingAppDef
           .findAllElements('translation')
           .where((element) =>
               (element.getAttribute('lang') == source) &&
@@ -192,9 +208,9 @@ class Logic extends ChangeNotifier {
     for (XmlElement translation in xmlSourceTranslations) {
       Key key = UniqueKey();
       /*
-    Now get those XmlElements into the main working list. This will leave the whole
-    transliterations 'column' empty. 
-    */
+      Now get those XmlElements into the main working list. This will leave the whole
+      transliterations 'column' empty. 
+      */
       listTransliterations
           .add(Transliteration(key: key, translation: translation.innerText));
 
@@ -230,14 +246,29 @@ class Logic extends ChangeNotifier {
         translation.siblings.add(builder.buildFragment());
       }
     }
+    return;
   }
 
   updateTransliterationStrings(String incoming) {
     listTransliterationStrings = incoming.split('\n');
   }
 
+  String listTransliterationsToString() {
+    String carriage = '\n';
+    String returnme = '';
+    for (var transliteration in listTransliterationStrings) {
+      if (returnme == '') {
+        returnme = transliteration;
+      } else {
+        returnme = '$returnme$carriage$transliteration';
+      }
+    }
+
+    return returnme;
+  }
+
   Future<String> createNewFile() async {
-    String fileContents = appDef.toXmlString(pretty: true);
+    String fileContents = workingAppDef.toXmlString(pretty: true);
 
     // for (var i = 0; i < listTransliterations.length; i++) {
     List<String> listOfTransliterations = listTransliterations

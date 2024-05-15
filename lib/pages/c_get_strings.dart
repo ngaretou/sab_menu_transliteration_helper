@@ -21,13 +21,21 @@ class _GetStringsState extends State<GetStrings> {
 
   @override
   void initState() {
-    init = Provider.of<Logic>(context, listen: false)
-        .initializeTransliterationList();
+    print('page three initstate');
+    Logic logic = Provider.of<Logic>(context, listen: false);
+    //
+    init = logic.initializeTransliterationList();
+    //
+    if (logic.listTransliterationStrings.isNotEmpty) {
+      transliterationsController.text = logic.listTransliterationsToString();
+    }
+
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    print('page three get strings build');
     Logic logic = Provider.of<Logic>(context, listen: false);
 
     NavController navButtons =

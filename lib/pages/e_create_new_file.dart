@@ -31,6 +31,37 @@ class _CreateNewFileState extends State<CreateNewFile> {
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const Text('Now download the new appDef file.\n'),
+                      RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(children: [
+                            TextSpan(
+                              style: Theme.of(context).textTheme.bodyMedium!,
+                              text:
+                                  'Move the new file to your project folder. \nRename your old appDef file ',
+                            ),
+                            TextSpan(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium!
+                                  .copyWith(fontStyle: FontStyle.italic),
+                              text: '"{yourprojectname}.appDef.old"\n',
+                            ),
+                            TextSpan(
+                              style: Theme.of(context).textTheme.bodyMedium!,
+                              text: 'and rename the new file ',
+                            ),
+                            TextSpan(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium!
+                                  .copyWith(fontStyle: FontStyle.italic),
+                              text: '"{yourprojectname}.appDef".',
+                            ),
+                          ])),
+                      const SizedBox(
+                        height: 20,
+                      ),
                       FilledButton.icon(
                           onPressed: () async {
                             logic.saveFile(context, snapshot.data!);
@@ -40,8 +71,6 @@ class _CreateNewFileState extends State<CreateNewFile> {
                       const SizedBox(
                         height: 20,
                       ),
-                      const Text(
-                          'Now download the new transliteration file and import it into SAB.'),
                     ],
                   ));
   }

@@ -40,6 +40,7 @@ class _VerifyStringsState extends State<VerifyStrings> {
 
     bool equalNumber = logic.listTransliterations.length ==
         logic.listTransliterationStrings.length;
+
     if (equalNumber) {
       return Column(
         children: [

@@ -36,7 +36,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
   Widget build(BuildContext context) {
     Logic logic = Provider.of<Logic>(context, listen: false);
     Logic logicListener = Provider.of<Logic>(context, listen: true);
-
+    logic.resetListTransliterationStrings();
     NavController navButtons =
         Provider.of<NavController>(context, listen: false);
     PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);

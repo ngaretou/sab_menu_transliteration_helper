@@ -31,7 +31,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
     //This is for the nav buttons
     Provider.of<PageTracker>(context, listen: true).addListener(() {
       if (pageTracker.currentPage == 0) {
-        if (logic.appDef.rootElement.children.isNotEmpty) {
+        if (logic.origAppDef.rootElement.children.isNotEmpty) {
           navButtons.setEnabledAndNotify(true);
         } else {
           navButtons.setEnabledAndNotify(false);
@@ -84,7 +84,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 18.0),
                 child: Text(
-                    'Drag and drop the appDef of your SAB project or click below to choose the file.'),
+                    'After closing SAB, drag and drop the appDef of your SAB project or click below to choose the file.'),
               ),
               const SizedBox(
                 height: 20,
