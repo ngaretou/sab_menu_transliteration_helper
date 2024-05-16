@@ -28,7 +28,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
         Provider.of<NavController>(context, listen: false);
     PageTracker pageTracker = Provider.of<PageTracker>(context, listen: false);
 
-    //This is for the nav buttons
+    //This is for the nav buttons - the pageview in body.dart fires this on new page
     Provider.of<PageTracker>(context, listen: true).addListener(() {
       if (pageTracker.currentPage == 0) {
         if (logic.origAppDef.rootElement.children.isNotEmpty) {
@@ -56,12 +56,15 @@ class _LoadTranslationsState extends State<LoadTranslations> {
               });
             },
             onDrop: (dynamic ev) async {
+              // Get the dropped file into a good format
               final Uint8List fileData = await controller.getFileData(ev);
               final String fileName = await controller.getFilename(ev);
               if (!context.mounted) return;
+              // check if it's an appdef and load the contents
               bool goAhead =
                   logic.checkAndReadFile(context, fileName, fileData);
               if (goAhead) {
+                // if all is good, advance a page
                 Future.delayed(Durations.long1, () => widget.pageForward());
               }
 
@@ -95,6 +98,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // drag and drop above - this is open with file chooser version
                   FilledButton.icon(
                       onPressed: () async {
                         FilePickerResult? result =
@@ -107,6 +111,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                             final Uint8List fileData = file.bytes!;
                             final String fileName = file.name;
                             if (!context.mounted) return;
+                            // same logic as above
                             logic.checkAndReadFile(context, fileName, fileData);
                           } else {
                             debugPrint('No data found');
@@ -117,22 +122,6 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                       },
                       icon: const Icon(Icons.file_open),
                       label: const Text('Choose file')),
-                  //
-                  // const SizedBox(
-                  //   width: 20,
-                  // ),
-                  // FilledButton.icon(
-                  //     onPressed: () =>
-                  //         logic.insertTranslationToAppDef('Corey', 'Katie'),
-                  //     icon: const Icon(Icons.paste),
-                  //     label: const Text('Insert element')),
-                  // const SizedBox(
-                  //   width: 20,
-                  // ),
-                  // FilledButton.icon(
-                  //     onPressed: () => logic.changeAppDef(),
-                  //     icon: const Icon(Icons.question_mark),
-                  //     label: const Text('Change element')),
                 ],
               )
             ],

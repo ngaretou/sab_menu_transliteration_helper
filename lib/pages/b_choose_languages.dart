@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/nav_controller.dart';
 import '../providers/logic.dart';
 
+// Here we're just seeing which is source and which is dest
 class ChooseLanguages extends StatefulWidget {
   const ChooseLanguages({super.key});
 
@@ -36,6 +37,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
   Widget build(BuildContext context) {
     Logic logic = Provider.of<Logic>(context, listen: false);
     Logic logicListener = Provider.of<Logic>(context, listen: true);
+    // reset on load in case we're moving backwards
     logic.resetListTransliterationStrings();
     NavController navButtons =
         Provider.of<NavController>(context, listen: false);
@@ -51,7 +53,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
       }
     }
 
-    //This is for the nav buttons
+    //This is for the nav buttons, fired from page view on changed in body.dart
     Provider.of<PageTracker>(context, listen: true).addListener(() {
       checkForNavEnabling();
     });
@@ -94,6 +96,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                     children: [
                       const SizedBox(width: 100, child: Text('Source')),
                       const SizedBox(width: 100),
+                      //source lang
                       DropdownMenu(
                         enabled: hasLanguages,
                         controller: sourceController,
@@ -117,6 +120,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                     children: [
                       const SizedBox(width: 100, child: Text('Destination')),
                       const SizedBox(width: 100),
+                      // dest lang
                       DropdownMenu(
                         enabled: hasLanguages,
                         controller: destController,
@@ -134,6 +138,7 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                         width: 40,
                         child: IconButton.filled(
                             onPressed: () {
+                              // dialog for adding a new lang code
                               showDialog(
                                   barrierDismissible: true,
                                   context: context,
@@ -150,77 +155,75 @@ class _ChooseLanguagesState extends State<ChooseLanguages> {
                                     }
 
                                     return Center(
-                                        child: Container(
-                                            padding: const EdgeInsets.all(20),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(20.0),
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .secondaryContainer,
-                                            ),
-                                            height: 200,
-                                            width: 250,
-                                            child: Column(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(20.0),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondaryContainer,
+                                        ),
+                                        height: 200,
+                                        width: 250,
+                                        child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                  'Add a new language code here'),
+                                              const SizedBox(
+                                                height: 20,
+                                              ),
+                                              TextFormField(
+                                                autofocus: true,
+                                                textCapitalization:
+                                                    TextCapitalization.none,
+                                                autocorrect: false,
+                                                decoration:
+                                                    const InputDecoration(
+                                                  filled: true,
+                                                  hintText: 'new lang code',
+                                                ),
+                                                controller: newLangController,
+                                                // The validator receives the text that the user has entered.
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'Please enter some text';
+                                                  } else {
+                                                    return null;
+                                                  }
+                                                },
+                                                onFieldSubmitted: (value) =>
+                                                    newLangSubmit(),
+                                              ),
+                                              const SizedBox(
+                                                height: 20,
+                                              ),
+                                              Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
                                                 children: [
-                                                  const Text(
-                                                      'Add a new language code here'),
+                                                  ElevatedButton(
+                                                      onPressed: () =>
+                                                          newLangSubmit(),
+                                                      child: const Text('OK')),
                                                   const SizedBox(
-                                                    height: 20,
+                                                    width: 20,
                                                   ),
-                                                  TextFormField(
-                                                    autofocus: true,
-                                                    textCapitalization:
-                                                        TextCapitalization.none,
-                                                    autocorrect: false,
-                                                    decoration:
-                                                        const InputDecoration(
-                                                      filled: true,
-                                                      hintText: 'new lang code',
-                                                    ),
-                                                    controller:
-                                                        newLangController,
-                                                    // The validator receives the text that the user has entered.
-                                                    validator: (value) {
-                                                      if (value == null ||
-                                                          value.isEmpty) {
-                                                        return 'Please enter some text';
-                                                      } else {
-                                                        return null;
-                                                      }
-                                                    },
-                                                    onFieldSubmitted: (value) =>
-                                                        newLangSubmit(),
-                                                  ),
-                                                  const SizedBox(
-                                                    height: 20,
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      ElevatedButton(
-                                                          onPressed: () =>
-                                                              newLangSubmit(),
-                                                          child:
-                                                              const Text('OK')),
-                                                      const SizedBox(
-                                                        width: 20,
-                                                      ),
-                                                      ElevatedButton(
-                                                          onPressed: () {
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop();
-                                                          },
-                                                          child: const Text(
-                                                              'Cancel')),
-                                                    ],
-                                                  ),
-                                                ])));
+                                                  ElevatedButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      child:
+                                                          const Text('Cancel')),
+                                                ],
+                                              ),
+                                            ]),
+                                      ),
+                                    );
                                   });
                             },
                             icon: const Icon(Icons.add)),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+//Provider for listening to the help pane
 class HelpPaneController extends ChangeNotifier {
   List<Widget> activeWidgets = [];
 
@@ -28,16 +29,9 @@ class HelpPaneController extends ChangeNotifier {
   }
 }
 
+//Provider for listening to the status of the arrow buttons on each page
 class NavController extends ChangeNotifier {
-  // void Function()? disabled = () {};
-  // void Function()? enabled = () {};
-
   bool enabled = false;
-  // bool enabled2 = false;
-
-  void setEnabled(bool incoming) {
-    enabled = incoming;
-  }
 
   void setEnabledAndNotify(bool incoming) {
     enabled = incoming;

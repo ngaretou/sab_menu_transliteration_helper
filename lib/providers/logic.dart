@@ -7,6 +7,7 @@ import 'dart:collection';
 import 'package:file_saver/file_saver.dart';
 import 'package:xml/xml.dart';
 
+// all the logic for dealing with the data
 class Transliteration {
   Key key;
   String translation;
@@ -22,20 +23,26 @@ class Transliteration {
 class Logic extends ChangeNotifier {
   //These are variables we'll use in all pages
   String originalFileName = '';
+  // make sure you keep the original app def rather than altering it
+  // and you have a working copy
   XmlDocument origAppDef =
       XmlDocument.parse('<?xml version="1.0" encoding="UTF-8"?><root></root>');
   XmlDocument workingAppDef =
       XmlDocument.parse('<?xml version="1.0" encoding="UTF-8"?><root></root>');
+  // all languages
   Set languages = {};
+  // the active ones in the dropdownboxes
   Set languagesActive = {};
+  // list of all transliterations
   List<Transliteration> listTransliterations = [];
+  // and the list of the menu items to transliterate for display
   String menuItemsToTransliterateAsString = '';
-
-  List<String> listTransliterationStrings =
-      []; // simple list of bare transliterations
+  // and the transliterated items simple list of bare transliterations
+  List<String> listTransliterationStrings = [];
   String source = ''; //The source lang code
   String dest = ''; //destination lang code
   bool newLanguage = false; //if this is a user-entered new language code
+  // whether we're replacing all or just the ones that are not existant yet
   bool replaceExistingTransliterations = false;
 
   setSource(String incomingSource) {
@@ -58,11 +65,10 @@ class Logic extends ChangeNotifier {
     notifyListeners();
   }
 
+  // initial load of new appDef file
   checkAndReadFile<bool>(
       BuildContext context, String fileName, Uint8List fileAsBytes) {
-    //in case we're doing multiple files, reset all data if dropping a new file in
-
-    // reset all data if dropping a new file in
+    //in case we're doing multiple files in one session, reset all data if dropping a new file in
     originalFileName = '';
     origAppDef = XmlDocument.parse(
         '<?xml version="1.0" encoding="UTF-8"?><root></root>');
@@ -113,12 +119,14 @@ class Logic extends ChangeNotifier {
 
       return true;
     } else {
+      // If the file is not appDef, give user feedback
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Unsupported File Type - import a SAB appDef file')));
       return false;
     }
   }
 
+  // get the active languages from the appDef
   Future parseXMLLangs() async {
     List<String> langCodesList = [];
 
@@ -153,6 +161,7 @@ class Logic extends ChangeNotifier {
         element == sourceControllerText || element == destControllerText);
   }
 
+  // if there is a new language that the appDef doesn't have in it yet
   addNewLanguage(String newLang) {
     newLanguage = true;
     dest = newLang;
@@ -165,10 +174,10 @@ class Logic extends ChangeNotifier {
   and along the way put bookmarks in our in-memory copy of the appDef so we can go back to them later.
   */
   Future initializeTransliterationList() async {
-    print('initialize transliteration list');
     List<XmlElement> xmlSourceTranslations = [];
-    menuItemsToTransliterateAsString = '';
 
+    // reset if coming back for another pass after the initial time through
+    menuItemsToTransliterateAsString = '';
     listTransliterations = [];
     workingAppDef = XmlDocument.parse(origAppDef.toXmlString());
 
@@ -205,10 +214,11 @@ class Logic extends ChangeNotifier {
           .toList();
     }
 
+    // Now deal with the resulting list of XmlElements
     for (XmlElement translation in xmlSourceTranslations) {
       Key key = UniqueKey();
       /*
-      Now get those XmlElements into the main working list. This will leave the whole
+      First get those XmlElements into the main working list. This will leave the whole
       transliterations 'column' empty. 
       */
       listTransliterations
@@ -224,12 +234,14 @@ class Logic extends ChangeNotifier {
             '$menuItemsToTransliterateAsString$carriage${translation.innerText}';
       }
 
-      // And leave those bookmarks; this will look like
-      // <translation lang="(dest)">(the unique key)</translation>
+      // And leave those bookmarks that we will come back to; this will look like
+      // <translation lang="(dest)">[the unique key]</translation>
       // so later on all we have to do is look for that key when adding in the transliterations
 
       if (translation.siblings
           .any((element) => element.getAttribute('lang') == dest)) {
+        // this is the case where the dest does already exist - just add the
+        // key 'bookmark' in the inner text of that tag
         try {
           final target = translation.siblings
               .firstWhere((element) => element.getAttribute('lang') == dest);
@@ -238,6 +250,7 @@ class Logic extends ChangeNotifier {
           debugPrint(e.toString());
         }
       } else {
+        // of if it doesn't already exist, then add in an xmlnode with the bookmark key
         final builder = XmlBuilder();
         builder.element('translation', nest: () {
           builder.attribute('lang', dest);
@@ -267,17 +280,24 @@ class Logic extends ChangeNotifier {
     return returnme;
   }
 
+  // this gets the tranlisterations into the in-memory copy of the appDef file,
+  //
   Future<String> createNewFile() async {
+    // get the xmldoc into a simple string for faster manipulation at this point
     String fileContents = workingAppDef.toXmlString(pretty: true);
 
-    // for (var i = 0; i < listTransliterations.length; i++) {
-    List<String> listOfTransliterations = listTransliterations
+    // get the keys column from the main list into a list of strings
+    List<String> listOfTransliterationKeys = listTransliterations
         .map((transliteration) => transliteration.key.toString())
         .toList();
 
-    Map<String, String> map =
-        Map.fromIterables(listOfTransliterations, listTransliterationStrings);
+    // so we can now get keys and transliterations into a map
+    Map<String, String> map = Map.fromIterables(
+        listOfTransliterationKeys, listTransliterationStrings);
 
+    // This fold command is a bit too compact to understand at first glance
+    //but basically takes a Map<String, String> map of keys and values
+    //and replaces *key with *value throughout the whole String fileContents
     String result = map.entries
         .fold(fileContents, (prev, e) => prev.replaceAll(e.key, e.value));
 
@@ -285,6 +305,7 @@ class Logic extends ChangeNotifier {
   }
 
   Future saveFile(BuildContext context, String fileContents) async {
+    // this takes the result of createFile and saves it to a new file
     final DateTime now = DateTime.now();
     final String formattedDate = formatDate(now);
     final String filename = '$originalFileName $formattedDate';
@@ -300,6 +321,7 @@ class Logic extends ChangeNotifier {
         mimeType: MimeType.text);
   }
 
+  // I just have this here so I don't have to load the whole intl package
   String formatDate(DateTime date) {
     final String month = date.month.toString().padLeft(2, '0');
     final String day = date.day.toString().padLeft(2, '0');

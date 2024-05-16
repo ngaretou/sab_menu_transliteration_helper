@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets/help_pane.dart';
 import '../providers/nav_controller.dart';
 
+// This is the navigation bar, to the left of the screen.
 class NavBar extends StatefulWidget {
   const NavBar({super.key});
 
@@ -20,7 +21,6 @@ class _NavBarState extends State<NavBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-        // padding: EdgeInsets.all(20),
         width: 250,
         color: Theme.of(context).colorScheme.surface,
         child: Column(children: [
@@ -53,6 +53,10 @@ class _NavBarState extends State<NavBar> {
               leading: const Icon(Icons.help_outline),
               title: const Text('Help'),
               onTap: () {
+                // Controlls hiding and showing the help pane.
+                // This provider helps manage this around the corner
+                // so you can open and close from this widget under the main body and
+                // also around in the help pane itself.
                 HelpPaneController helpPane =
                     Provider.of<HelpPaneController>(context, listen: false);
                 if (helpPane.activeWidgets.isEmpty) {
@@ -102,6 +106,7 @@ class _NavBarState extends State<NavBar> {
   }
 }
 
+// shows the about dialog
 void showAbout(BuildContext context) async {
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
   if (!context.mounted) return;
@@ -115,7 +120,6 @@ void showAbout(BuildContext context) async {
             Row(
               children: [
                 Container(
-                  // child: Image.asset('assets/icons/icon.png'),
                   width: 50,
                   height: 50,
                   decoration: const BoxDecoration(
@@ -180,12 +184,6 @@ void showAbout(BuildContext context) async {
             ),
           ])),
           actions: <Widget>[
-            // OutlinedButton(
-            //   child: const Text('Copyrights'),
-            //   onPressed: () {
-            //     Navigator.of(context).pushNamed(AboutScreen.routeName);
-            //   },
-            // ),
             OutlinedButton(
               child: const Text('Licenses'),
               onPressed: () {

@@ -15,18 +15,20 @@ class GetStrings extends StatefulWidget {
 
 class _GetStringsState extends State<GetStrings> {
   TextEditingController transliterationsController = TextEditingController();
-  bool showCopyHelper = false;
-  Icon hoveringIcon = const Icon(Icons.copy);
+  bool showCopyHelper =
+      false; // this is whether or not the color overlay with icon is shown
+  Icon hoveringIcon =
+      const Icon(Icons.copy); // initially copy but after copy is a check mark
   late Future init;
 
   @override
   void initState() {
-    print('page three initstate');
     Logic logic = Provider.of<Logic>(context, listen: false);
     //
     init = logic.initializeTransliterationList();
     //
     if (logic.listTransliterationStrings.isNotEmpty) {
+      // getting displayable list
       transliterationsController.text = logic.listTransliterationsToString();
     }
 
@@ -35,7 +37,6 @@ class _GetStringsState extends State<GetStrings> {
 
   @override
   Widget build(BuildContext context) {
-    print('page three get strings build');
     Logic logic = Provider.of<Logic>(context, listen: false);
 
     NavController navButtons =

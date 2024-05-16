@@ -59,6 +59,7 @@ class MainApp extends StatelessWidget {
           title: const Text("SAB menu transliteration helper"),
           automaticallyImplyLeading: true,
         ),
+        //The main view of the app is three columns: the nav bar, the main workign area, and help pane
         body: const Row(
           children: [NavBar(), Body(), HelpPane()],
         ),
