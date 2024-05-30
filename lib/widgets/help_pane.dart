@@ -19,7 +19,7 @@ class _HelpPaneState extends State<HelpPane> {
   @override
   Widget build(BuildContext context) {
     final infoPaneBackgroundColor =
-        Theme.of(context).colorScheme.surfaceVariant;
+        Theme.of(context).colorScheme.surfaceContainerHighest;
 
     List<Widget> activeWidgets =
         Provider.of<HelpPaneController>(context, listen: true).activeWidgets;

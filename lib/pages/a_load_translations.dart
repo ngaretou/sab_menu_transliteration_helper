@@ -41,6 +41,19 @@ class _LoadTranslationsState extends State<LoadTranslations> {
 
     late DropzoneViewController controller;
 
+    handleFileAdded(String fileName, Uint8List fileData) {
+      // check if it's an appdef and load the contents
+      bool goAhead = logic.checkAndReadFile(context, fileName, fileData);
+      if (goAhead) {
+        // if all is good, advance a page
+        Future.delayed(Durations.long1, () => widget.pageForward());
+      }
+
+      setState(() {
+        pageBackgroundColor = Colors.transparent;
+      });
+    }
+
     return Container(
       color: pageBackgroundColor,
       child: Stack(
@@ -59,18 +72,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
               // Get the dropped file into a good format
               final Uint8List fileData = await controller.getFileData(ev);
               final String fileName = await controller.getFilename(ev);
-              if (!context.mounted) return;
-              // check if it's an appdef and load the contents
-              bool goAhead =
-                  logic.checkAndReadFile(context, fileName, fileData);
-              if (goAhead) {
-                // if all is good, advance a page
-                Future.delayed(Durations.long1, () => widget.pageForward());
-              }
-
-              setState(() {
-                pageBackgroundColor = Colors.transparent;
-              });
+              handleFileAdded(fileName, fileData);
             },
             onLeave: () => setState(() {
               pageBackgroundColor = Colors.transparent;
@@ -112,7 +114,7 @@ class _LoadTranslationsState extends State<LoadTranslations> {
                             final String fileName = file.name;
                             if (!context.mounted) return;
                             // same logic as above
-                            logic.checkAndReadFile(context, fileName, fileData);
+                            handleFileAdded(fileName, fileData);
                           } else {
                             debugPrint('No data found');
                           }

@@ -78,7 +78,10 @@ class _BodyState extends State<Body> {
           // bottomLeft: Radius.circular(10),
         ),
         child: Container(
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.3),
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceContainerHighest
+              .withOpacity(.3),
           child: Column(
             children: [
               // In the column, first the pageview builder itself, taking up all the space it can
@@ -96,10 +99,7 @@ class _BodyState extends State<Body> {
               // Then a fixed-height container containing the page view control row
               Container(
                 height: 70,
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceVariant
-                    .withOpacity(.5),
+                color: Theme.of(context).colorScheme.surfaceDim.withOpacity(.5),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(

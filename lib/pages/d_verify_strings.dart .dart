@@ -59,7 +59,7 @@ class _VerifyStringsState extends State<VerifyStrings> {
                 decoration: BoxDecoration(
                   borderRadius:
                       const BorderRadius.only(topLeft: Radius.circular(10)),
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
